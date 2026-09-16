@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinSuite — Python API</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">FinSuite <span>· FastAPI (app/)</span></div>
+  <div class="quota"><a href="/docs" target="_blank" style="color:#fff;text-decoration:none;">API docs ↗</a></div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="ratios">01 Ratios</button>
+  <button class="tab" data-tab="report">02 Finance Report</button>
+  <button class="tab" data-tab="assistant">03 AI Assistant</button>
+  <button class="tab" data-tab="loans">04 Loan Insights</button>
+  <button class="tab" data-tab="credit">05 Credit &amp; Risk</button>
+  <button class="tab" data-tab="invest">06 Investment Call</button>
+  <button class="tab" data-tab="perf">07 Company Perf.</button>
+  <button class="tab" data-tab="dashboard">08 Portfolio Dash.</button>
+  <button class="tab" data-tab="goals">09 Goals &amp; Retirement</button>
+  <button class="tab" data-tab="knowledge">10 Knowledge Center</button>
+  <button class="tab" data-tab="market">11 Stock Market</button>
+  <button class="tab" data-tab="planner">12 Growth &amp; Target</button>
+  <button class="tab" data-tab="tax">13 Portfolio &amp; Tax</button>
+  <button class="tab" data-tab="watchlist">14 Watchlist &amp; Alerts</button>
+  <button class="tab" data-tab="keys">15 API Key Directory</button>
+</nav>
+
+<main>
+
+  <!-- ============ 01 RATIO CALCULATORS ============ -->
+  <section id="panel-ratios" class="panel active">
+    <div class="grid-2">
+      <div class="card">
+        <h2>ROE — Return on Equity</h2>
+        <div class="field"><label>Net Income (₹)</label><input id="roeIncome" type="number" value="100000"></div>
+        <div class="field"><label>Equity (₹)</label><input id="roeEquity" type="number" value="500000"></div>
+        <button class="btn" onclick="calcROE()">Calculate</button>
+        <div class="result-box" id="roeResult">—</div>
+      </div>
+      <div class="card">
+        <h2>ROA — Return on Assets</h2>
+        <div class="field"><label>Net Income (₹)</label><input id="roaIncome" type="number" value="100000"></div>
+        <div class="field"><label>Assets (₹)</label><input id="roaAssets" type="number" value="1000000"></div>
+        <button class="btn" onclick="calcROA()">Calculate</button>
+        <div class="result-box" id="roaResult">—</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Debt Ratio</h2>
+        <div class="field"><label>Liabilities (₹)</label><input id="drLiab" type="number" value="400000"></div>
+        <div class="field"><label>Assets (₹)</label><input id="drAssets" type="number" value="1000000"></div>
+        <button class="btn" onclick="calcDebtRatio()">Calculate</button>
+        <div class="result-box" id="drResult">—</div>
+      </div>
+      <div class="card">
+        <h2>Health Score (ROE-based)</h2>
+        <div class="field"><label>ROE (%)</label><input id="hsRoe" type="number" value="18"></div>
+        <button class="btn" onclick="calcHealth()">Calculate</button>
+        <div class="result-box" id="hsResult">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 PERSONAL FINANCE REPORT ============ -->
+  <section id="panel-report" class="panel">
+    <div class="card">
+      <h2>Personal Finance Report</h2>
+      <div class="row">
+        <div class="field"><label>Income (₹)</label><input id="repIncome" type="number" value="80000"></div>
+        <div class="field"><label>Expenses (₹)</label><input id="repExpenses" type="number" value="50000"></div>
+        <div class="field"><label>Savings (₹)</label><input id="repSavings" type="number" value="40000"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Debt (₹)</label><input id="repDebt" type="number" value="200000"></div>
+        <div class="field"><label>Equity (₹)</label><input id="repEquity" type="number" value="500000"></div>
+      </div>
+      <button class="btn" onclick="calcReport()">Generate report</button>
+      <div id="reportOut" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <!-- ============ 03 AI FINANCE ASSISTANT ============ -->
+  <section id="panel-assistant" class="panel">
+    <div class="card">
+      <h2>Ask about a finance term</h2>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="btn-row">
+        <input id="chatInput" type="text" placeholder="e.g. what is ROE?" style="flex:1;">
+        <button class="btn" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Leverage &amp; Savings Snapshot</h2>
+      <div class="row">
+        <div class="field"><label>Income (₹)</label><input id="asIncome" type="number" value="80000"></div>
+        <div class="field"><label>Expenses (₹)</label><input id="asExpenses" type="number" value="50000"></div>
+        <div class="field"><label>Savings (₹)</label><input id="asSavings" type="number" value="40000"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Borrowed money (₹)</label><input id="asBorrowed" type="number" value="100000"></div>
+        <div class="field"><label>Owned money (₹)</label><input id="asOwned" type="number" value="300000"></div>
+      </div>
+      <button class="btn" onclick="calcAssistant()">Analyze</button>
+      <div class="chart-box"><canvas id="assistantChart"></canvas></div>
+      <div class="insight-box" id="assistantInsight" style="display:none;"><span class="lbl">AI insight</span><span id="assistantInsightText"></span></div>
+    </div>
+  </section>
+
+  <!-- ============ 04 LOAN INSIGHT GENERATOR ============ -->
+  <section id="panel-loans" class="panel">
+    <div class="card">
+      <h2>Loan Insight Generator</h2>
+      <p class="muted">Add customers, then screen them all in one call to <code>POST /loans/screen</code>.</p>
+      <div class="row">
+        <div class="field"><label>Customer name</label><input id="loanName" type="text" value="R. Verma"></div>
+        <div class="field"><label>Income (₹/mo)</label><input id="loanIncome" type="number" value="65000"></div>
+        <div class="field"><label>Loan amount (₹)</label><input id="loanAmount" type="number" value="500000"></div>
+        <div class="field"><label>EMI (₹/mo)</label><input id="loanEmi" type="number" value="12000"></div>
+        <div class="field"><label>Credit score</label><input id="loanScore" type="number" value="810"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" onclick="addLoanRow()">Add customer</button>
+        <button class="btn secondary" onclick="loadLoanSample()">Load sample customers</button>
+        <button class="btn" onclick="screenLoans()">Screen all</button>
+      </div>
+      <div class="table-wrap"><table id="loanTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ============ 05 CREDIT SCORE & RISK DASHBOARD ============ -->
+  <section id="panel-credit" class="panel">
+    <div class="grid-2">
+      <div class="card">
+        <h2>Credit Score Lookup</h2>
+        <div class="field"><label>Credit Score (300–900)</label><input id="csScore" type="number" value="780"></div>
+        <button class="btn" onclick="calcCreditScore()">Check</button>
+        <div class="result-box" id="csResult">—</div>
+        <div class="insight-box" id="csInsight" style="display:none;"><span class="lbl">Insight</span><span id="csInsightText"></span></div>
+      </div>
+      <div class="card">
+        <h2>Customer Risk Assessment</h2>
+        <div class="field"><label>Name</label><input id="riskName" type="text" value="R. Verma"></div>
+        <div class="field"><label>Income (₹/mo)</label><input id="riskIncome" type="number" value="50000"></div>
+        <div class="field"><label>EMI (₹/mo)</label><input id="riskEmi" type="number" value="22000"></div>
+        <div class="field"><label>Credit Score</label><input id="riskScore" type="number" value="700"></div>
+        <button class="btn" onclick="calcRisk()">Assess</button>
+        <div class="result-box" id="riskResult">—</div>
+        <div class="insight-box" id="riskInsight" style="display:none;"><span class="lbl">Insight</span><span id="riskInsightText"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 06 INVESTMENT RECOMMENDATION ============ -->
+  <section id="panel-invest" class="panel">
+    <div class="card">
+      <h2>Single-Company BUY / HOLD / AVOID</h2>
+      <div class="row">
+        <div class="field"><label>Revenue Growth (%)</label><input id="invRevenue" type="number" value="20"></div>
+        <div class="field"><label>Profit Margin (%)</label><input id="invProfit" type="number" value="18"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>ROA (%)</label><input id="invRoa" type="number" value="12"></div>
+        <div class="field"><label>ROE (%)</label><input id="invRoe" type="number" value="16"></div>
+      </div>
+      <button class="btn" onclick="calcInvest()">Get call</button>
+      <div class="result-box" id="invResult">—</div>
+      <div class="chart-box"><canvas id="investChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ============ 07 COMPANY PERFORMANCE ============ -->
+  <section id="panel-perf" class="panel">
+    <div class="card">
+      <h2>Company Performance Score</h2>
+      <div class="field"><label>Company name</label><input id="perfName" type="text" value="Acme Corp"></div>
+      <div class="row">
+        <div class="field"><label>Revenue Growth (%)</label><input id="perfRevenue" type="number" value="20"></div>
+        <div class="field"><label>Customer Satisfaction (%)</label><input id="perfCsat" type="number" value="85"></div>
+        <div class="field"><label>Employee Retention (%)</label><input id="perfRetention" type="number" value="90"></div>
+      </div>
+      <button class="btn" onclick="calcPerf()">Analyze</button>
+      <div id="perfOut" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <!-- ============ 08 PORTFOLIO DASHBOARD ============ -->
+  <section id="panel-dashboard" class="panel">
+    <div class="card">
+      <h2>Multi-Company Screener</h2>
+      <p class="muted">Add companies (by ratios, or by raw financials — either works), then screen with <code>POST /portfolio</code>.</p>
+      <div class="row">
+        <div class="field"><label>Company</label><input id="dashCompany" type="text" value="JP Morgan"></div>
+        <div class="field"><label>ROE (%)</label><input id="dashRoe" type="number" value="20"></div>
+        <div class="field"><label>ROA (%)</label><input id="dashRoa" type="number" value="14"></div>
+        <div class="field"><label>Revenue Growth (%)</label><input id="dashRevGrowth" type="number" value="18"></div>
+        <div class="field"><label>Profit Margin (%)</label><input id="dashMargin" type="number" value="22"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" onclick="addDashRow()">Add company</button>
+        <button class="btn secondary" onclick="loadDashSample()">Load 5-company sample</button>
+        <button class="btn" onclick="screenPortfolio()">Screen all</button>
+      </div>
+      <div class="stat-strip" id="dashScoreboard"></div>
+    </div>
+    <div class="grid-2" id="dashWorkspace" style="display:none;">
+      <div class="card">
+        <h2>Companies</h2>
+        <div id="dashRows"></div>
+      </div>
+      <div class="card">
+        <h2>Detail</h2>
+        <div id="dashDetail"></div>
+        <div class="chart-box"><canvas id="dashChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 09 GOAL & RETIREMENT PLANNER ============ -->
+  <section id="panel-goals" class="panel">
+    <div class="card">
+      <h2>Goal Planner</h2>
+      <div class="row">
+        <div class="field"><label>Goal name</label><input id="goalName" type="text" value="Retirement"></div>
+        <div class="field"><label>Target amount today (₹)</label><input id="goalTarget" type="number" value="5000000"></div>
+        <div class="field"><label>Years to goal</label><input id="goalYears" type="number" value="15"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Current savings (₹)</label><input id="goalCurrent" type="number" value="200000"></div>
+        <div class="field"><label>Expected return (%/yr)</label><input id="goalReturn" type="number" value="12"></div>
+        <div class="field"><label>Inflation (%/yr)</label><input id="goalInflation" type="number" value="6"></div>
+      </div>
+      <div class="field" style="max-width:240px;"><label>Monthly income (₹, optional)</label><input id="goalIncome" type="number" value="80000"></div>
+      <button class="btn" onclick="calcGoalPlan()">Calculate plan</button>
+      <div class="result-box" id="goalError" style="display:none;color:var(--danger);"></div>
+      <div class="stat-strip" id="goalStats" style="display:none;"></div>
+      <div class="chart-box" id="goalChartWrap" style="display:none;"><canvas id="goalChart"></canvas></div>
+      <div class="insight-box" id="goalInsight" style="display:none;"><span class="lbl">AI insight</span><span id="goalInsightText"></span></div>
+    </div>
+    <div class="card">
+      <h2>Emergency Fund Check</h2>
+      <div class="row">
+        <div class="field"><label>Monthly essential expenses (₹)</label><input id="efExpenses" type="number" value="40000"></div>
+        <div class="field"><label>Current savings (₹)</label><input id="efSavings" type="number" value="150000"></div>
+      </div>
+      <button class="btn" onclick="calcEmergencyFund()">Check</button>
+      <div id="efResult" style="display:none;margin-top:12px;">
+        <div class="progress-track"><div class="progress-fill" id="efFill"></div></div>
+        <div class="result-box" id="efMonths"></div>
+        <div class="insight-box"><span class="lbl">Insight</span><span id="efInsightText"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10 KNOWLEDGE CENTER ============ -->
+  <section id="panel-knowledge" class="panel">
+    <div class="card">
+      <h2>Glossary</h2>
+      <p class="muted">Pulled live from <code>GET /knowledge/glossary</code>.</p>
+      <div id="kcList"></div>
+    </div>
+  </section>
+
+  <!-- ============ 11 STOCK MARKET WORKSPACE ============ -->
+  <section id="panel-market" class="panel">
+    <div class="card">
+      <h2>Quote &amp; Daily History</h2>
+      <p class="muted">No API key needed — live quotes and daily history come straight from Yahoo Finance (via <code>yfinance</code>), free with no signup.</p>
+      <div class="row">
+        <div class="field"><label>Symbol</label>
+          <select id="marketSymbol">
+            <option value="RELIANCE.BSE">Reliance Industries (RELIANCE.BSE)</option>
+            <option value="TCS.BSE">Tata Consultancy Services (TCS.BSE)</option>
+            <option value="INFY.BSE">Infosys (INFY.BSE)</option>
+            <option value="IBM">IBM (demo-friendly)</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="getQuote()">Get live quote</button>
+        <button class="btn secondary" onclick="getDailyHistory()">Fetch daily history</button>
+      </div>
+      <div class="result-box" id="marketStatus">—</div>
+      <div class="table-wrap"><table id="marketTable"></table></div>
+    </div>
+    <div class="card">
+      <h2>News</h2>
+      <p class="muted">No API key needed — headlines come from Google News' public RSS feed.</p>
+      <div class="row">
+        <div class="field"><label>Symbols (comma-separated)</label><input id="newsSymbols" type="text" value="RELIANCE.BSE"></div>
+      </div>
+      <button class="btn" onclick="getNews()">Fetch news</button>
+      <div id="newsOut" style="margin-top:12px;"></div>
+    </div>
+  </section>
+
+  <!-- ============ 12 GROWTH & TARGET PLANNER ============ -->
+  <section id="panel-planner" class="panel">
+    <div class="grid-2">
+      <div class="card">
+        <h2>What-If Growth</h2>
+        <div class="field"><label>Amount invested (₹)</label><input id="wiAmount" type="number" value="10000"></div>
+        <div class="field"><label>Price then (₹)</label><input id="wiThen" type="number" value="2500"></div>
+        <div class="field"><label>Price now (₹)</label><input id="wiNow" type="number" value="2800"></div>
+        <div class="field"><label>Days held</label><input id="wiDays" type="number" value="365"></div>
+        <button class="btn" onclick="calcWhatIf()">Calculate</button>
+        <div class="result-box" id="wiResult">—</div>
+      </div>
+      <div class="card">
+        <h2>Target / Stop-Loss Plan</h2>
+        <div class="field"><label>Entry price (₹)</label><input id="tpEntry" type="number" value="2500"></div>
+        <div class="field"><label>Quantity</label><input id="tpQty" type="number" value="10"></div>
+        <div class="field"><label>Target %</label><input id="tpTarget" type="number" value="15"></div>
+        <div class="field"><label>Stop-loss %</label><input id="tpStop" type="number" value="8"></div>
+        <button class="btn" onclick="calcTargetPlan()">Calculate</button>
+        <div class="result-box" id="tpResult">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 13 PORTFOLIO & TAX TOOLS ============ -->
+  <section id="panel-tax" class="panel">
+    <div class="card">
+      <h2>SIP vs Lump Sum</h2>
+      <div class="row">
+        <div class="field"><label>Total to invest (₹)</label><input id="sipTotal" type="number" value="60000"></div>
+        <div class="field"><label>Months</label><input id="sipMonths" type="number" value="12"></div>
+        <div class="field"><label>Start price (₹)</label><input id="sipStart" type="number" value="2500"></div>
+        <div class="field"><label>Last price (₹)</label><input id="sipLast" type="number" value="2800"></div>
+      </div>
+      <div class="field"><label>Monthly prices, comma-separated (one per month, oldest first)</label><input id="sipPrices" type="text" value="2500,2520,2480,2600,2550,2610,2650,2700,2680,2720,2750,2800" style="width:100%;"></div>
+      <button class="btn" onclick="calcSip()">Compare</button>
+      <div class="result-box" id="sipResult">—</div>
+    </div>
+    <div class="card">
+      <h2>Capital Gains Tax (India, simplified)</h2>
+      <div class="row">
+        <div class="field"><label>Buy price (₹)</label><input id="taxBuy" type="number" value="2500"></div>
+        <div class="field"><label>Sell price (₹)</label><input id="taxSell" type="number" value="2800"></div>
+        <div class="field"><label>Quantity</label><input id="taxQty" type="number" value="10"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Buy date</label><input id="taxBuyDate" type="date" value="2024-01-01"></div>
+        <div class="field"><label>Sell date</label><input id="taxSellDate" type="date" value="2025-06-01"></div>
+        <div class="field"><label>Other LTCG this year (₹)</label><input id="taxOtherLtcg" type="number" value="0"></div>
+      </div>
+      <button class="btn" onclick="calcTax()">Estimate</button>
+      <div class="result-box" id="taxResult">—</div>
+    </div>
+    <div class="card">
+      <h2>52-Week Range Check</h2>
+      <div class="row">
+        <div class="field"><label>Current price (₹)</label><input id="rangeCurrent" type="number" value="2650"></div>
+        <div class="field"><label>52-week high (₹)</label><input id="rangeHigh" type="number" value="3100"></div>
+        <div class="field"><label>52-week low (₹)</label><input id="rangeLow" type="number" value="2200"></div>
+      </div>
+      <button class="btn" onclick="calcRange()">Check</button>
+      <div class="result-box" id="rangeResult">—</div>
+    </div>
+  </section>
+
+  <!-- ============ 14 WATCHLIST & PRICE ALERTS ============ -->
+  <section id="panel-watchlist" class="panel">
+    <div class="card">
+      <h2>Watchlist</h2>
+      <p class="muted">No dedicated backend for this section — it reuses <code>GET /market/quote</code> from section 11, with the same API key. Prices are only fetched when you click Refresh.</p>
+      <div class="btn-row">
+        <select id="wlSymbol">
+          <option value="RELIANCE.BSE">Reliance Industries</option>
+          <option value="TCS.BSE">Tata Consultancy Services</option>
+          <option value="INFY.BSE">Infosys</option>
+        </select>
+        <button class="btn" onclick="addWatchlistSymbol()">Add to watchlist</button>
+        <button class="btn secondary" onclick="refreshWatchlist()">Refresh all live prices</button>
+      </div>
+      <div class="table-wrap"><table id="wlTable"></table></div>
+    </div>
+    <div class="card">
+      <h2>Price Alerts</h2>
+      <div class="row">
+        <div class="field"><label>Symbol</label><select id="alertSymbol"></select></div>
+        <div class="field"><label>Alert type</label><select id="alertType"><option value="above">Price rises above</option><option value="below">Price falls below</option></select></div>
+        <div class="field"><label>Target price (₹)</label><input id="alertPrice" type="number" value="2900"></div>
+      </div>
+      <button class="btn" onclick="addPriceAlert()">Add alert</button>
+      <div class="table-wrap"><table id="alertTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ============ 15 API KEY DIRECTORY ============ -->
+  <section id="panel-keys" class="panel">
+    <div class="card">
+      <h2>API Key Directory</h2>
+      <p class="muted">Pulled live from <code>GET /api-keys</code>.</p>
+      <div id="keysOut"></div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

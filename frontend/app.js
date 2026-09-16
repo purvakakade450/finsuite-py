@@ -1,0 +1,524 @@
+const CHARTS = {};
+function destroyChart(k){ if(CHARTS[k]){ CHARTS[k].destroy(); delete CHARTS[k]; } }
+function barChart(canvasId, key, labels, data, opts={}){
+  destroyChart(key);
+  CHARTS[key] = new Chart(document.getElementById(canvasId), {
+    type:"bar",
+    data:{ labels, datasets:[{ data, backgroundColor: opts.color||"#0E7C7B", borderRadius:5, maxBarThickness:50 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{color:"#64708A"},grid:{display:false}}, y:{ticks:{color:"#64708A"},grid:{color:"#E3E8F0"},beginAtZero:true} } }
+  });
+}
+function lineChart(canvasId, key, labels, datasets){
+  destroyChart(key);
+  CHARTS[key] = new Chart(document.getElementById(canvasId), {
+    type:"line",
+    data:{ labels, datasets },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:"#64708A",font:{size:11}}}},
+      scales:{ x:{ticks:{color:"#64708A",maxTicksLimit:8},grid:{display:false}}, y:{ticks:{color:"#64708A"},grid:{color:"#E3E8F0"}} } }
+  });
+}
+async function api(method, path, body){
+  const res = await fetch(path, {
+    method,
+    headers: body ? {"Content-Type":"application/json"} : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if(!res.ok){
+    const e = await res.json().catch(()=>({detail:res.statusText}));
+    throw new Error(typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail));
+  }
+  return res.json();
+}
+function renderTable(id, rows, cols, limit=20){
+  const table = document.getElementById(id);
+  const shown = rows.slice(0, limit);
+  table.innerHTML = `<tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr>` +
+    shown.map(r=>`<tr>${cols.map(c=>`<td>${r[c]===null||r[c]===undefined?"—":r[c]}</td>`).join("")}</tr>`).join("") +
+    (rows.length>limit ? `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--muted);">…and ${rows.length-limit} more</td></tr>` : "");
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+  });
+});
+
+/* ============================================================
+   01 RATIOS  ->  POST /ratios/roe|roa|debt-ratio|health
+   ============================================================ */
+async function calcROE(){
+  const box = document.getElementById("roeResult");
+  try{ const r = await api("POST","/ratios/roe",{net_income:+document.getElementById("roeIncome").value, equity:+document.getElementById("roeEquity").value});
+    box.textContent = `ROE = ${r.roe_pct.toFixed(2)}%`; }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function calcROA(){
+  const box = document.getElementById("roaResult");
+  try{ const r = await api("POST","/ratios/roa",{net_income:+document.getElementById("roaIncome").value, assets:+document.getElementById("roaAssets").value});
+    box.textContent = `ROA = ${r.roa_pct.toFixed(2)}%`; }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function calcDebtRatio(){
+  const box = document.getElementById("drResult");
+  try{ const r = await api("POST","/ratios/debt-ratio",{liabilities:+document.getElementById("drLiab").value, assets:+document.getElementById("drAssets").value});
+    box.textContent = `Debt Ratio = ${r.debt_ratio.toFixed(2)}`; }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function calcHealth(){
+  const r = await api("POST","/ratios/health",{roe:+document.getElementById("hsRoe").value});
+  document.getElementById("hsResult").textContent = `Health: ${r.health}`;
+}
+
+/* ============================================================
+   02 PERSONAL FINANCE REPORT -> POST /report
+   ============================================================ */
+async function calcReport(){
+  const out = document.getElementById("reportOut");
+  try{
+    const r = await api("POST","/report",{
+      income:+document.getElementById("repIncome").value, expenses:+document.getElementById("repExpenses").value,
+      savings:+document.getElementById("repSavings").value, debt:+document.getElementById("repDebt").value,
+      equity:+document.getElementById("repEquity").value,
+    });
+    out.innerHTML = `
+      <div class="stat-strip">
+        <div class="stat">Net Profit<b>₹${r.net_profit.toLocaleString()}</b></div>
+        <div class="stat">ROE<b>${r.roe.toFixed(1)}%</b></div>
+        <div class="stat">ROA<b>${r.roa.toFixed(1)}%</b></div>
+        <div class="stat">Current Ratio<b>${r.current_ratio.toFixed(2)}</b></div>
+        <div class="stat">Debt-to-Equity<b>${r.debt_to_equity.toFixed(2)}</b></div>
+      </div>
+      <div class="insight-box"><span class="lbl">Tips</span>${r.tips.map(t=>`<div style="margin-top:5px;">• ${t}</div>`).join("")}</div>`;
+  }catch(e){ out.innerHTML = `<div class="result-box">Error: ${e.message}</div>`; }
+}
+
+/* ============================================================
+   03 AI ASSISTANT -> POST /assistant/chat, POST /assistant/snapshot
+   ============================================================ */
+function addMsg(text, who){
+  const log = document.getElementById("chatLog");
+  const div = document.createElement("div");
+  div.className = `msg ${who}`;
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+async function sendChat(){
+  const input = document.getElementById("chatInput");
+  const q = input.value.trim();
+  if(!q) return;
+  addMsg(q, "user"); input.value = "";
+  const r = await api("POST","/assistant/chat",{question:q});
+  addMsg(r.answer, "bot");
+}
+document.getElementById("chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter") sendChat(); });
+addMsg("Ask me about any finance term — ROE, ROA, GDP, inflation, assets, liabilities, equity and more.", "bot");
+
+async function calcAssistant(){
+  const box = document.getElementById("assistantInsight");
+  try{
+    const r = await api("POST","/assistant/snapshot",{
+      income:+document.getElementById("asIncome").value, expenses:+document.getElementById("asExpenses").value,
+      savings:+document.getElementById("asSavings").value, borrowed:+document.getElementById("asBorrowed").value,
+      owned:+document.getElementById("asOwned").value,
+    });
+    barChart("assistantChart","assistant", ["ROE %","ROA %","Borrowed/Owned","Savings Ratio %"], [r.roe, r.roa, r.borrowed_to_owned*100, r.savings_ratio]);
+    document.getElementById("assistantInsightText").textContent = r.insight;
+    box.style.display = "block";
+  }catch(e){ box.style.display="none"; alert(e.message); }
+}
+
+/* ============================================================
+   04 LOAN INSIGHT GENERATOR -> POST /loans/screen
+   ============================================================ */
+let LOAN_ROWS = [];
+function addLoanRow(){
+  LOAN_ROWS.push({
+    customer_name: document.getElementById("loanName").value,
+    income: +document.getElementById("loanIncome").value,
+    loan_amount: +document.getElementById("loanAmount").value,
+    emi: +document.getElementById("loanEmi").value,
+    credit_score: +document.getElementById("loanScore").value,
+  });
+  renderTable("loanTable", LOAN_ROWS, ["customer_name","income","loan_amount","emi","credit_score"]);
+}
+function loadLoanSample(){
+  LOAN_ROWS = [
+    {customer_name:"R. Verma", income:65000, loan_amount:500000, emi:12000, credit_score:810},
+    {customer_name:"S. Iyer", income:48000, loan_amount:300000, emi:9000, credit_score:760},
+    {customer_name:"P. Nair", income:32000, loan_amount:250000, emi:11000, credit_score:690},
+    {customer_name:"A. Khan", income:28000, loan_amount:400000, emi:15000, credit_score:580},
+  ];
+  renderTable("loanTable", LOAN_ROWS, ["customer_name","income","loan_amount","emi","credit_score"]);
+}
+async function screenLoans(){
+  if(!LOAN_ROWS.length){ alert("Add at least one customer first."); return; }
+  const r = await api("POST","/loans/screen",{rows:LOAN_ROWS});
+  renderTable("loanTable", r.rows, ["customer_name","income","loan_amount","emi","credit_score","ai_insight","ai_recommendation"]);
+}
+
+/* ============================================================
+   05 CREDIT SCORE & RISK -> POST /credit-score, POST /risk
+   ============================================================ */
+async function calcCreditScore(){
+  const out = document.getElementById("csResult"), box = document.getElementById("csInsight");
+  try{
+    const r = await api("POST","/credit-score",{score:+document.getElementById("csScore").value});
+    out.className = `result-box ${r.level}`;
+    out.textContent = `${r.category} · ${r.risk}`;
+    document.getElementById("csInsightText").textContent = r.insight;
+    box.style.display = "block";
+  }catch(e){ out.className="result-box"; out.textContent = "Error: "+e.message; box.style.display="none"; }
+}
+async function calcRisk(){
+  const out = document.getElementById("riskResult"), box = document.getElementById("riskInsight");
+  const r = await api("POST","/risk",{
+    name:document.getElementById("riskName").value||"This customer",
+    income:+document.getElementById("riskIncome").value||null, emi:+document.getElementById("riskEmi").value||null,
+    score:+document.getElementById("riskScore").value,
+  });
+  out.className = `result-box ${r.band}`;
+  out.textContent = `${r.name}: ${r.level}`;
+  document.getElementById("riskInsightText").textContent = r.insight;
+  box.style.display = "block";
+}
+
+/* ============================================================
+   06 INVESTMENT RECOMMENDATION -> POST /invest
+   ============================================================ */
+async function calcInvest(){
+  const r = await api("POST","/invest",{
+    revenue_growth:+document.getElementById("invRevenue").value||0, profit_margin:+document.getElementById("invProfit").value||0,
+    roa:+document.getElementById("invRoa").value||0, roe:+document.getElementById("invRoe").value||0,
+  });
+  const out = document.getElementById("invResult");
+  out.className = `result-box ${r.band}`;
+  out.textContent = `${r.label} (score ${r.score}/4)`;
+  barChart("investChart","invest", ["Revenue Growth","Profit Margin","ROA","ROE"],
+    [+document.getElementById("invRevenue").value, +document.getElementById("invProfit").value, +document.getElementById("invRoa").value, +document.getElementById("invRoe").value]);
+}
+calcInvest();
+
+/* ============================================================
+   07 COMPANY PERFORMANCE -> POST /company-performance
+   ============================================================ */
+async function calcPerf(){
+  const out = document.getElementById("perfOut");
+  const r = await api("POST","/company-performance",{
+    name:document.getElementById("perfName").value, revenue_growth:+document.getElementById("perfRevenue").value,
+    csat:+document.getElementById("perfCsat").value, retention:+document.getElementById("perfRetention").value,
+  });
+  out.innerHTML = `
+    <div class="result-box ${r.band}" style="font-size:16px;">${r.name}: ${r.status} (${r.score}/100)</div>
+    <div class="insight-box"><span class="lbl">AI summary</span>${r.recommendations.map(t=>`<div style="margin-top:5px;">• ${t}</div>`).join("")}</div>`;
+}
+
+/* ============================================================
+   08 PORTFOLIO DASHBOARD -> POST /portfolio
+   ============================================================ */
+let DASH_ROWS = [];
+const PF_STATE = { companies: [], selected: null };
+function addDashRow(){
+  DASH_ROWS.push({
+    company: document.getElementById("dashCompany").value,
+    roe: +document.getElementById("dashRoe").value,
+    roa: +document.getElementById("dashRoa").value,
+    revenue_growth: +document.getElementById("dashRevGrowth").value,
+    profit_margin: +document.getElementById("dashMargin").value,
+  });
+  document.getElementById("dashScoreboard").innerHTML = `<div class="stat">Companies queued<b>${DASH_ROWS.length}</b></div>`;
+}
+function loadDashSample(){
+  DASH_ROWS = [
+    {company:"JP Morgan", roe:20, roa:14, revenue_growth:18, profit_margin:22},
+    {company:"Tesla",     roe:11, roa:8,  revenue_growth:10, profit_margin:12},
+    {company:"ABC Ltd",   roe:3,  roa:2,  revenue_growth:3,  profit_margin:4},
+    {company:"Google",    roe:21, roa:15, revenue_growth:20, profit_margin:24},
+    {company:"Infosys",   roe:17, roa:12, revenue_growth:14, profit_margin:18},
+  ];
+  document.getElementById("dashScoreboard").innerHTML = `<div class="stat">Companies queued<b>${DASH_ROWS.length}</b></div>`;
+}
+async function screenPortfolio(){
+  if(!DASH_ROWS.length){ alert("Add at least one company first."); return; }
+  const r = await api("POST","/portfolio",{companies:DASH_ROWS});
+  PF_STATE.companies = r.companies.filter(c=>c.has_data);
+  PF_STATE.selected = PF_STATE.companies.length ? 0 : null;
+  renderDash();
+}
+function renderDash(){
+  const has = PF_STATE.companies.length>0;
+  document.getElementById("dashWorkspace").style.display = has ? "grid" : "none";
+  if(!has) return;
+  const buy = PF_STATE.companies.filter(c=>c.recommendation==="buy").length;
+  const hold = PF_STATE.companies.filter(c=>c.recommendation==="hold").length;
+  const sell = PF_STATE.companies.filter(c=>c.recommendation==="sell").length;
+  document.getElementById("dashScoreboard").innerHTML = `
+    <div class="stat">Companies<b>${PF_STATE.companies.length}</b></div>
+    <div class="stat">Buy<b class="badge-good">${buy}</b></div>
+    <div class="stat">Hold<b>${hold}</b></div>
+    <div class="stat">Sell<b class="badge-warn">${sell}</b></div>`;
+  const rowsEl = document.getElementById("dashRows");
+  rowsEl.innerHTML = "";
+  PF_STATE.companies.forEach((c,i)=>{
+    const row = document.createElement("div");
+    row.className = `company-row${i===PF_STATE.selected?" sel":""}`;
+    row.innerHTML = `<div><div class="name">${c.company}</div><div class="score">Score ${c.score}/100</div></div><span class="badge ${c.recommendation}">${c.recommendation.toUpperCase()}</span>`;
+    row.addEventListener("click", ()=>{ PF_STATE.selected=i; renderDash(); });
+    rowsEl.appendChild(row);
+  });
+  renderDashDetail();
+}
+function renderDashDetail(){
+  const panel = document.getElementById("dashDetail");
+  if(PF_STATE.selected===null){ panel.innerHTML = `<div style="color:var(--muted);text-align:center;padding:30px 10px;">Select a company to see its full breakdown.</div>`; return; }
+  const m = PF_STATE.companies[PF_STATE.selected];
+  const card = (label,val)=> val===null||val===undefined ? `<div class="result-box">${label}: —</div>` : `<div class="result-box"><b>${label}</b>: ${val.toFixed(1)}%</div>`;
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+      <div><h3 style="margin:0;">${m.company}</h3>${m.health?`<div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Health: ${m.health}</div>`:""}</div>
+      <span class="badge ${m.recommendation}" style="font-size:12.5px;padding:6px 12px;">${m.recommendation.toUpperCase()} · ${m.score}/100</span>
+    </div>
+    <div class="stat-strip">${card("ROE",m.roe)}${card("ROA",m.roa)}${card("Rev Growth",m.revenue_growth)}${card("Margin",m.profit_margin)}</div>
+    <div style="margin-top:10px;font-size:12.5px;color:var(--muted);">Risk level: <b style="color:var(--text)">${m.risk}</b></div>`;
+  const labels=[], data=[];
+  if(m.roe!==null){labels.push("ROE");data.push(m.roe);}
+  if(m.roa!==null){labels.push("ROA");data.push(m.roa);}
+  if(m.revenue_growth!==null){labels.push("Rev Growth");data.push(m.revenue_growth);}
+  if(m.profit_margin!==null){labels.push("Margin");data.push(m.profit_margin);}
+  barChart("dashChart","dash", labels, data);
+}
+
+/* ============================================================
+   09 GOALS -> POST /goals/plan, POST /goals/emergency-fund
+   ============================================================ */
+async function calcGoalPlan(){
+  const errEl = document.getElementById("goalError");
+  try{
+    const r = await api("POST","/goals/plan",{
+      name:document.getElementById("goalName").value, target:+document.getElementById("goalTarget").value,
+      years:+document.getElementById("goalYears").value, current:+document.getElementById("goalCurrent").value||0,
+      ret:+document.getElementById("goalReturn").value, inflation:+document.getElementById("goalInflation").value,
+      income:+document.getElementById("goalIncome").value||null,
+    });
+    errEl.style.display = "none";
+    document.getElementById("goalStats").style.display = "flex";
+    document.getElementById("goalStats").innerHTML = `
+      <div class="stat">Future value needed<b>₹${Math.round(r.future_value_goal).toLocaleString()}</b></div>
+      <div class="stat">Monthly SIP<b>₹${Math.round(r.monthly_sip).toLocaleString()}/mo</b></div>
+      <div class="stat">Total invested<b>₹${Math.round(r.total_invested).toLocaleString()}</b></div>
+      <div class="stat">Projected gain<b>₹${Math.round(r.gain).toLocaleString()}</b></div>`;
+    document.getElementById("goalChartWrap").style.display = "block";
+    lineChart("goalChart","goal", r.schedule.map(y=>`Yr ${y.year}`), [
+      { label:"Projected corpus", data:r.schedule.map(y=>y.projected_corpus), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.12)", fill:true, tension:.25, pointRadius:2 },
+      { label:"Inflation-adjusted target", data:r.schedule.map(y=>y.target), borderColor:"#B9840E", borderDash:[6,4], pointRadius:0 },
+    ]);
+    document.getElementById("goalInsightText").textContent = r.insight;
+    document.getElementById("goalInsight").style.display = "block";
+  }catch(e){
+    errEl.style.display = "block"; errEl.textContent = e.message;
+    document.getElementById("goalStats").style.display = "none";
+    document.getElementById("goalChartWrap").style.display = "none";
+    document.getElementById("goalInsight").style.display = "none";
+  }
+}
+async function calcEmergencyFund(){
+  const wrap = document.getElementById("efResult");
+  try{
+    const r = await api("POST","/goals/emergency-fund",{expenses:+document.getElementById("efExpenses").value, savings:+document.getElementById("efSavings").value||0});
+    wrap.style.display = "block";
+    document.getElementById("efFill").className = `progress-fill ${r.level}`;
+    document.getElementById("efFill").style.width = r.progress_pct+"%";
+    document.getElementById("efMonths").textContent = `${r.months_covered.toFixed(1)} months covered`;
+    document.getElementById("efInsightText").textContent = r.insight;
+  }catch(e){ wrap.style.display = "none"; alert(e.message); }
+}
+
+/* ============================================================
+   10 KNOWLEDGE CENTER -> GET /knowledge/glossary
+   ============================================================ */
+(async function loadGlossary(){
+  try{
+    const r = await api("GET","/knowledge/glossary");
+    const kcList = document.getElementById("kcList");
+    r.glossary.forEach(item=>{
+      const el = document.createElement("div");
+      el.className = "acc-item";
+      el.innerHTML = `<button class="acc-q"><span>${item.q}</span><span class="chev">+</span></button><div class="acc-a"><p>${item.a}</p></div>`;
+      el.querySelector(".acc-q").addEventListener("click", ()=> el.classList.toggle("open"));
+      kcList.appendChild(el);
+    });
+  }catch(e){ document.getElementById("kcList").textContent = "Could not load glossary: "+e.message; }
+})();
+
+/* ============================================================
+   11 STOCK MARKET WORKSPACE -> GET /market/quote|daily|news
+   No API key needed — quotes/history via yfinance, news via Google News RSS.
+   ============================================================ */
+async function getQuote(){
+  const box = document.getElementById("marketStatus");
+  box.textContent = "Fetching live quote…";
+  try{
+    const symbol = document.getElementById("marketSymbol").value;
+    const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(symbol)}`);
+    box.textContent = `${symbol}: ₹${q.price}` +
+      (q.change!=null ? ` (${q.change>=0?"+":""}${q.change}, ${q.changePercent}%)` : "") +
+      (q.previousClose!=null ? ` — previous close ₹${q.previousClose}` : "");
+  }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function getDailyHistory(){
+  const box = document.getElementById("marketStatus");
+  box.textContent = "Fetching daily history…";
+  try{
+    const symbol = document.getElementById("marketSymbol").value;
+    const raw = await api("GET", `/market/daily?symbol=${encodeURIComponent(symbol)}`);
+    const rows = raw.rows || [];
+    if(!rows.length){ box.textContent = "No history returned — check the symbol."; return; }
+    box.textContent = `Loaded ${rows.length} days for ${symbol} (showing latest 30).`;
+    renderTable("marketTable", rows.slice(-30).reverse(), ["Date","Open","High","Low","Close","Volume"], 30);
+  }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function getNews(){
+  const out = document.getElementById("newsOut");
+  out.textContent = "Fetching news…";
+  try{
+    const symbols = document.getElementById("newsSymbols").value;
+    const raw = await api("GET", `/market/news?symbols=${encodeURIComponent(symbols)}&limit=10`);
+    const items = raw.data || [];
+    out.innerHTML = items.length ? items.map(a=>`<div class="result-box"><b>${a.title}</b><div class="muted" style="margin-top:4px;">${a.source||""} · ${(a.published_at||"").slice(0,16)}</div></div>`).join("") : "No news items returned.";
+  }catch(e){ out.textContent = "Error: "+e.message; }
+}
+
+/* ============================================================
+   12 GROWTH & TARGET PLANNER -> POST /planner/what-if, /planner/target-plan
+   ============================================================ */
+async function calcWhatIf(){
+  const box = document.getElementById("wiResult");
+  try{
+    const r = await api("POST","/planner/what-if",{
+      amount:+document.getElementById("wiAmount").value, price_then:+document.getElementById("wiThen").value,
+      price_now:+document.getElementById("wiNow").value, days_held:+document.getElementById("wiDays").value,
+    });
+    box.innerHTML = `Shares: <b>${r.shares.toFixed(4)}</b><br>Value now: <b>₹${r.value_now.toFixed(2)}</b><br>Gain: <b class="${r.gain>=0?'badge-good':'badge-warn'}">₹${r.gain.toFixed(2)} (${r.gain_pct.toFixed(2)}%)</b>${r.cagr!==null?`<br>CAGR: <b>${r.cagr.toFixed(2)}%</b>`:""}`;
+  }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function calcTargetPlan(){
+  const box = document.getElementById("tpResult");
+  try{
+    const r = await api("POST","/planner/target-plan",{
+      entry:+document.getElementById("tpEntry").value, qty:+document.getElementById("tpQty").value,
+      target_pct:+document.getElementById("tpTarget").value, stop_pct:+document.getElementById("tpStop").value,
+    });
+    box.className = `result-box ${r.band||""}`;
+    box.innerHTML = `Target price: <b class="badge-good">₹${r.target_price.toFixed(2)}</b><br>Stop-loss price: <b class="badge-warn">₹${r.stop_price.toFixed(2)}</b><br>Potential gain: ₹${r.gain_amount.toFixed(2)} · Potential loss: ₹${r.loss_amount.toFixed(2)}${r.risk_reward!==null?`<br>Risk-Reward: <b>${r.risk_reward.toFixed(2)}</b>`:""}<br><span class="muted">${r.verdict}</span>`;
+  }catch(e){ box.className="result-box"; box.textContent = "Error: "+e.message; }
+}
+
+/* ============================================================
+   13 PORTFOLIO & TAX TOOLS
+   ============================================================ */
+async function calcSip(){
+  const box = document.getElementById("sipResult");
+  try{
+    const prices = document.getElementById("sipPrices").value.split(",").map(s=>+s.trim()).filter(n=>!isNaN(n));
+    const r = await api("POST","/tools/sip-vs-lumpsum",{
+      total:+document.getElementById("sipTotal").value, months:+document.getElementById("sipMonths").value,
+      start_price:+document.getElementById("sipStart").value, prices_by_month:prices, last_price:+document.getElementById("sipLast").value,
+    });
+    box.innerHTML = `Lump sum value: <b>₹${r.lump_sum_value.toFixed(2)}</b><br>SIP value: <b>₹${r.sip_value.toFixed(2)}</b><br>Winner: <b class="badge-good">${r.winner==="lump_sum"?"Lump Sum":"SIP"}</b> by ₹${r.difference.toFixed(2)}`;
+  }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function calcTax(){
+  const box = document.getElementById("taxResult");
+  try{
+    const r = await api("POST","/tools/capital-gains-tax",{
+      buy_price:+document.getElementById("taxBuy").value, sell_price:+document.getElementById("taxSell").value,
+      qty:+document.getElementById("taxQty").value, buy_date:document.getElementById("taxBuyDate").value,
+      sell_date:document.getElementById("taxSellDate").value, other_ltcg:+document.getElementById("taxOtherLtcg").value||0,
+    });
+    box.innerHTML = `Holding period: <b>${r.holding_days} days</b> → <b>${r.tax_type}</b><br>Gross gain: <b>₹${r.gain.toFixed(2)}</b><br>Estimated tax (incl. cess): <b class="badge-warn">₹${r.tax.toFixed(2)}</b><br>Net proceeds: <b class="badge-good">₹${r.net_proceeds.toFixed(2)}</b>`;
+  }catch(e){ box.textContent = "Error: "+e.message; }
+}
+async function calcRange(){
+  const box = document.getElementById("rangeResult");
+  try{
+    const r = await api("POST","/tools/52-week-range",{
+      current:+document.getElementById("rangeCurrent").value, high:+document.getElementById("rangeHigh").value, low:+document.getElementById("rangeLow").value,
+    });
+    box.innerHTML = `Position in range: <b>${r.range_position_pct.toFixed(1)}%</b><br>From 52w high: <b class="badge-warn">${r.from_high_pct.toFixed(2)}%</b><br>From 52w low: <b class="badge-good">+${r.from_low_pct.toFixed(2)}%</b>`;
+  }catch(e){ box.textContent = "Error: "+e.message; }
+}
+
+/* ============================================================
+   14 WATCHLIST & PRICE ALERTS (reuses GET /market/quote)
+   ============================================================ */
+const WATCHLIST = [];
+const ALERTS = [];
+function addWatchlistSymbol(){
+  const symbol = document.getElementById("wlSymbol").value;
+  if(!WATCHLIST.some(w=>w.symbol===symbol)) WATCHLIST.push({symbol, price:null, change:null, changePercent:null, day:null});
+  renderWatchlist(); refreshAlertSymbolSelect();
+}
+function removeWatchlistSymbol(i){ WATCHLIST.splice(i,1); renderWatchlist(); refreshAlertSymbolSelect(); }
+function renderWatchlist(){
+  const table = document.getElementById("wlTable");
+  table.innerHTML = `<tr><th>Symbol</th><th>Price</th><th>Change</th><th>%</th><th>As of</th><th></th></tr>` +
+    WATCHLIST.map((w,i)=>`<tr><td>${w.symbol}</td><td>${w.price??"—"}</td><td>${w.change??"—"}</td><td>${w.changePercent??"—"}</td><td>${w.day??"—"}</td><td><button class="btn secondary" onclick="removeWatchlistSymbol(${i})">Remove</button></td></tr>`).join("");
+}
+async function refreshWatchlist(){
+  for(const w of WATCHLIST){
+    try{
+      const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(w.symbol)}`);
+      if(q && q.price!=null) Object.assign(w, { price:q.price, change:q.change, changePercent:q.changePercent, day:q.previousClose!=null?`prev close ₹${q.previousClose}`:"" });
+      else w.price = "no data";
+    }catch(e){ w.price = "Error"; }
+  }
+  renderWatchlist();
+  checkAlerts();
+}
+function refreshAlertSymbolSelect(){
+  const sel = document.getElementById("alertSymbol");
+  sel.innerHTML = WATCHLIST.map(w=>`<option value="${w.symbol}">${w.symbol}</option>`).join("") || `<option value="">Add a symbol to the watchlist first</option>`;
+}
+function addPriceAlert(){
+  const symbol = document.getElementById("alertSymbol").value;
+  if(!symbol){ alert("Add a symbol to the watchlist first."); return; }
+  ALERTS.push({ symbol, type:document.getElementById("alertType").value, price:+document.getElementById("alertPrice").value, triggered:false });
+  renderAlerts();
+}
+function removePriceAlert(i){ ALERTS.splice(i,1); renderAlerts(); }
+function renderAlerts(){
+  const table = document.getElementById("alertTable");
+  table.innerHTML = `<tr><th>Symbol</th><th>Condition</th><th>Status</th><th></th></tr>` +
+    ALERTS.map((a,i)=>`<tr><td>${a.symbol}</td><td>${a.type==="above"?"Rises above":"Falls below"} ₹${a.price}</td><td>${a.triggered?'<b class="badge-warn">Alert triggered</b>':"Watching"}</td><td><button class="btn secondary" onclick="removePriceAlert(${i})">Remove</button></td></tr>`).join("");
+}
+function checkAlerts(){
+  ALERTS.forEach(a=>{
+    const w = WATCHLIST.find(x=>x.symbol===a.symbol);
+    if(!w || typeof w.price !== "number") return;
+    a.triggered = a.type==="above" ? w.price > a.price : w.price < a.price;
+  });
+  renderAlerts();
+}
+refreshAlertSymbolSelect();
+
+/* ============================================================
+   15 API KEY DIRECTORY -> GET /api-keys
+   ============================================================ */
+(async function loadKeys(){
+  try{
+    const r = await api("GET","/api-keys");
+    if(!r.keys || !r.keys.length){
+      document.getElementById("keysOut").innerHTML = `<div class="result-box">${r.note || "No API keys required."}</div>`;
+      return;
+    }
+    document.getElementById("keysOut").innerHTML = r.keys.map(k=>`
+      <div class="key-card">
+        <h3>${k.name}</h3>
+        <div>${k.function}</div>
+        <div class="meta">Used in: ${k.used_in.join(", ")} · Free tier: ${k.free_tier}</div>
+        <div class="meta"><a href="${k.get_key_url}" target="_blank">Get a key →</a></div>
+      </div>`).join("");
+  }catch(e){ document.getElementById("keysOut").textContent = "Could not load: "+e.message; }
+})();

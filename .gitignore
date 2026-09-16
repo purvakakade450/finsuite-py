@@ -1,0 +1,5 @@
+frontend.zip
+*.zip
+agentic_env/
+__pycache__/
+*.pyc

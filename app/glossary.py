@@ -1,0 +1,16 @@
+GLOSSARY = [
+    {"q": "What is ROE (Return on Equity)?", "a": "ROE = (Net Income ÷ Shareholders' Equity) × 100. Above 15–20% is generally strong."},
+    {"q": "What is ROA (Return on Assets)?", "a": "ROA = (Net Income ÷ Total Assets) × 100. Above 10% is a common benchmark."},
+    {"q": "What is Debt Ratio?", "a": "Debt Ratio = Total Liabilities ÷ Total Assets. Higher means more leverage."},
+    {"q": "What is Profit Margin?", "a": "Profit Margin = (Net Income ÷ Revenue) × 100. Above 15% signals healthy pricing power."},
+    {"q": "What is Revenue Growth?", "a": "Revenue Growth = ((Current − Prior) ÷ Prior) × 100. Above 10% is treated as strong momentum."},
+    {"q": "What is Current Ratio?", "a": "Current Ratio = Savings ÷ Expenses — months of expenses your savings could cover."},
+    {"q": "What is Debt-to-Equity Ratio?", "a": "Debt ÷ Equity. Above 1 means debt outweighs owned equity."},
+    {"q": "What is the Savings Ratio?", "a": "Savings Ratio = (Savings ÷ Income) × 100. Below 20% is flagged as thin."},
+    {"q": "How is the investment score calculated?", "a": "ROE > 15% (30 pts), ROA > 10% (25 pts), Revenue Growth > 10% (25 pts), Profit Margin > 15% (20 pts), normalized to 100."},
+    {"q": "How does the BUY / HOLD / SELL call work?", "a": "Score ≥ 75 → BUY. Score 50–74 → HOLD. Score below 50 → SELL."},
+    {"q": "What are the credit score risk categories?", "a": "300–549 Poor, 550–649 Fair, 650–749 Good, 750–799 Very Good, 800–900 Excellent."},
+    {"q": "What is EMI-to-Income ratio?", "a": "EMI ÷ Monthly Income. Above ~40% is a heavy repayment burden and can push risk up a notch."},
+    {"q": "What is a SIP (Systematic Investment Plan)?", "a": "A fixed amount invested every month rather than as one lump sum."},
+    {"q": "What is an Emergency Fund?", "a": "Cash set aside for essential expenses if income stops. Benchmark: 3–6 months of expenses."},
+]
