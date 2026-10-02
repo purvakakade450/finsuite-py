@@ -78,7 +78,6 @@ def health(body: s.HealthIn):
 def report(body: s.ReportIn):
     return _wrap(calc.calc_report, body.income, body.expenses, body.savings, body.debt, body.equity)
 
-
 # ---------------------------------------------------------------------------
 # 03 AI Finance Assistant
 # ---------------------------------------------------------------------------
@@ -86,11 +85,9 @@ def report(body: s.ReportIn):
 def assistant_snapshot(body: s.AssistantIn):
     return _wrap(calc.calc_assistant, body.income, body.expenses, body.savings, body.borrowed, body.owned)
 
-
 @app.post("/assistant/chat", tags=["03 AI Finance Assistant"])
 def assistant_chat(body: s.ChatIn):
     return {"answer": calc.chat_reply(body.question)}
-
 
 # ---------------------------------------------------------------------------
 # 04 Loan insight generator
@@ -99,7 +96,6 @@ def assistant_chat(body: s.ChatIn):
 def loans_screen(body: s.LoanScreenIn):
     rows = [r.model_dump() for r in body.rows]
     return {"rows": calc.screen_loans(rows)}
-
 
 # ---------------------------------------------------------------------------
 # 05 Credit score & risk dashboard
@@ -184,7 +180,6 @@ def market_search(q: str = Query(..., min_length=1), limit: int = Query(8, ge=1,
 @app.get("/market/quote", tags=["11 Stock Market"])
 def market_quote(symbol: str = Query(..., min_length=1)):
     return _market(market.get_quote, symbol)
-
 
 @app.get("/market/daily", tags=["11 Stock Market"])
 def market_daily(symbol: str = Query(..., min_length=1),
