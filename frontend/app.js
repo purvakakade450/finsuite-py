@@ -374,12 +374,13 @@ async function getQuote(){
   box.textContent = "Fetching live quote…";
   try{
     const symbol = document.getElementById("marketSymbol").value.trim();
-    if(!symbol){ box.textContent = "Type a company name or ticker above."; return; }
+    if(!symbol){ box.textContent = "Choose a company above."; return; }
     const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(symbol)}`);
     if(my !== REQ.quote) return;
     const input = document.getElementById("marketSymbol");
-    if(document.activeElement !== input && input.value.trim() === symbol && q.yahooSymbol !== symbol){
+    if(input.value.trim() === symbol){
       input.value = q.yahooSymbol;                       // e.g. "samsung" -> "005930.KS"
+      setPickerLabel("marketPicker", q.name, q.yahooSymbol);
       const news = document.getElementById("newsSymbols");
       if(news.value.trim() === symbol) news.value = q.yahooSymbol;
     }
@@ -532,11 +533,9 @@ async function calcRange(){
    ============================================================ */
 const WATCHLIST = [];
 const ALERTS = [];
-function addWatchlistSymbol(){
-  const input = document.getElementById("wlSymbol");
-  const symbol = input.value.trim().toUpperCase();
-  if(!symbol){ input.focus(); return; }
-  input.value = "";
+function addWatchlistSymbol(picked){
+  const symbol = (picked || document.getElementById("wlSymbol").value).trim();
+  if(!symbol){ document.querySelector("#wlPicker .picker-btn").click(); return; }
   if(!WATCHLIST.some(w=>w.symbol===symbol)) WATCHLIST.push({symbol, price:null, change:null, changePercent:null, day:null});
   renderWatchlist(); refreshAlertSymbolSelect(); refreshWatchlist();
 }
@@ -648,9 +647,8 @@ setInterval(runAutoRefresh, 5000);
 document.addEventListener("visibilitychange", ()=>runAutoRefresh());
 
 /* ============================================================
-   SYMBOL SEARCH DROPDOWN — click to browse popular stocks, or type
-   any company name / ticker to search every listed company via
-   GET /market/search. Enter picks the highlighted (or first) match.
+   COMPANY PICKER — dropdown of popular stocks with a search box that
+   finds any listed company via GET /market/search.
    ============================================================ */
 const POPULAR = [
   ["Indices", [
@@ -682,71 +680,81 @@ const POPULAR = [
   ]],
 ].map(([group, rows])=>({ group, rows: rows.map(([symbol,name,exchange])=>({symbol,name,exchange,type:"EQUITY"})) }));
 
-function attachSymbolSearch(inputId, boxId, onPick){
-  const input = document.getElementById(inputId), box = document.getElementById(boxId);
-  const toggle = input.parentElement.querySelector(".suggest-toggle");
-  let timer = null, items = [], active = -1, seq = 0;
+/* Dropdown with a search box inside: the closed state shows the selected
+   company; opening it focuses a search field above the list. With the
+   field empty the list shows POPULAR; typing filters it and adds live
+   GET /market/search results for every other listed company. */
+function attachSymbolPicker(pickerId, hiddenInputId, onPick){
+  const root = document.getElementById(pickerId), hidden = document.getElementById(hiddenInputId);
+  const btn = root.querySelector(".picker-btn"), panel = root.querySelector(".picker-panel");
+  const search = root.querySelector(".picker-search input"), list = root.querySelector(".picker-list");
+  let timer = null, items = [], sections = [], active = -1, seq = 0;
   const norm = s=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
-  const close = ()=>{ box.hidden = true; active = -1; };
-  const pick = (symbol)=>{ input.value = symbol; close(); input.blur(); onPick(symbol); };
 
-  // sections: [{group, rows}] — flattened into `items` for keyboard navigation
-  const render = (sections, note="")=>{
-    items = sections.flatMap(s=>s.rows);
+  const render = (secs, note="")=>{
+    sections = secs;
+    items = secs.flatMap(s=>s.rows);
     let i = 0;
-    box.innerHTML = sections.filter(s=>s.rows.length).map(s=>
+    list.innerHTML = secs.filter(s=>s.rows.length).map(s=>
       `<div class="suggest-group">${escapeHtml(s.group)}</div>` +
-      s.rows.map(r=>{ const k = i++; return `<div class="suggest-item${k===active?" active":""}" data-i="${k}"><span class="sym">${escapeHtml(r.symbol)}</span><span class="nm">${escapeHtml(r.name)}</span><span class="exch">${escapeHtml(r.exchange)}${r.type && r.type!=="EQUITY"?" · "+escapeHtml(r.type):""}</span></div>`; }).join("")
+      s.rows.map(r=>{ const k = i++; return `<div class="suggest-item${k===active?" active":""}${r.symbol===hidden.value?" selected":""}" data-i="${k}"><span class="sym">${escapeHtml(r.symbol)}</span><span class="nm">${escapeHtml(r.name)}</span><span class="exch">${escapeHtml(r.exchange)}${r.type && r.type!=="EQUITY"?" · "+escapeHtml(r.type):""}</span></div>`; }).join("")
     ).join("") + (note ? `<div class="suggest-empty">${note}</div>` : "");
-    box.hidden = false;
-    const el = box.querySelector(".suggest-item.active"); if(el) el.scrollIntoView({block:"nearest"});
+    const el = list.querySelector(".suggest-item.active"); if(el) el.scrollIntoView({block:"nearest"});
   };
-  let sections = [];
-  const show = (secs, note)=>{ sections = secs; render(secs, note); };
-  const showPopular = ()=>{ active = -1; show(POPULAR); };
-  const localMatches = q=>{
-    const n = norm(q);
-    return POPULAR.flatMap(s=>s.rows).filter(r=>norm(r.name).includes(n) || norm(r.symbol).startsWith(n)).slice(0,6);
+  const open = ()=>{
+    panel.hidden = false; root.classList.add("open");
+    search.value = ""; active = -1; render(POPULAR);
+    search.focus();
+  };
+  const close = ()=>{ panel.hidden = true; root.classList.remove("open"); clearTimeout(timer); };
+  const pick = (symbol, name)=>{
+    hidden.value = symbol;
+    setPickerLabel(pickerId, name || symbol, name ? symbol : "");
+    close(); btn.focus();
+    onPick(symbol);
   };
 
-  input.addEventListener("focus", ()=>{ input.select(); showPopular(); });
-  input.addEventListener("click", ()=>{ if(box.hidden) showPopular(); });
-  if(toggle) toggle.addEventListener("mousedown", e=>{ e.preventDefault(); if(box.hidden){ input.focus(); showPopular(); } else close(); });
+  btn.addEventListener("click", ()=> panel.hidden ? open() : close());
+  btn.addEventListener("keydown", e=>{ if(e.key==="ArrowDown"){ e.preventDefault(); open(); } });
+  document.addEventListener("mousedown", e=>{ if(!panel.hidden && !root.contains(e.target)) close(); });
 
-  input.addEventListener("input", ()=>{
+  search.addEventListener("input", ()=>{
     clearTimeout(timer);
-    const q = input.value.trim();
+    const q = search.value.trim();
     active = -1;
-    if(!q){ showPopular(); return; }
-    const local = localMatches(q);
-    show([{group:"Popular", rows:local}], "Searching all listed companies…");
+    if(!q){ render(POPULAR); return; }
+    const n = norm(q);
+    const local = POPULAR.flatMap(s=>s.rows).filter(r=>norm(r.name).includes(n) || norm(r.symbol).startsWith(n)).slice(0,6);
+    render([{group:"Popular", rows:local}], "Searching all listed companies…");
     timer = setTimeout(async ()=>{
       const my = ++seq;
       try{
         const r = await api("GET", `/market/search?q=${encodeURIComponent(q)}`);
-        if(my !== seq || document.activeElement !== input) return;   // a newer keystroke won
+        if(my !== seq || panel.hidden) return;                       // a newer keystroke won
         const seen = new Set(local.map(x=>x.symbol));
         const more = (r.results||[]).filter(x=>!seen.has(x.symbol));
-        show([{group:"Popular", rows:local}, {group:"All markets", rows:more}],
-             local.length || more.length ? "" : `No company found for “${escapeHtml(q)}”. Check the spelling, or press Enter to try it as a ticker.`);
-      }catch(e){ if(my === seq) show(sections.slice(0,1), "Search is unavailable right now — press Enter to try it as a ticker."); }
+        render([{group:"Popular", rows:local}, {group:"All markets", rows:more}],
+               local.length || more.length ? "" : `No company found for “${escapeHtml(q)}”. Check the spelling, or press Enter to try it as a ticker.`);
+      }catch(e){ if(my === seq) render(sections.slice(0,1), "Search is unavailable right now — press Enter to try it as a ticker."); }
     }, 250);
   });
-  input.addEventListener("keydown", e=>{
-    const open = !box.hidden && items.length;
-    if(e.key === "ArrowDown"){ if(box.hidden) showPopular(); else if(open){ active = (active+1) % items.length; render(sections); } e.preventDefault(); }
-    else if(e.key === "ArrowUp" && open){ active = (active-1+items.length) % items.length; render(sections); e.preventDefault(); }
+  search.addEventListener("keydown", e=>{
+    if(e.key === "ArrowDown" && items.length){ active = (active+1) % items.length; render(sections); e.preventDefault(); }
+    else if(e.key === "ArrowUp" && items.length){ active = (active-1+items.length) % items.length; render(sections); e.preventDefault(); }
     else if(e.key === "Enter"){
       e.preventDefault();
-      const v = input.value.trim();
-      if(open && active >= 0) pick(items[active].symbol);
-      else if(open && v) pick(items[0].symbol);        // best match for what was typed
-      else if(v) pick(v);                              // backend resolves names/tickers itself
+      const v = search.value.trim();
+      if(items.length && (active >= 0 || v)){ const r = items[Math.max(active,0)]; pick(r.symbol, r.name); }
+      else if(v) pick(v);                                  // backend resolves names/tickers itself
     }
-    else if(e.key === "Escape") close();
+    else if(e.key === "Escape"){ close(); btn.focus(); }
   });
-  box.addEventListener("mousedown", e=>{ e.preventDefault(); const el = e.target.closest(".suggest-item"); if(el) pick(items[+el.dataset.i].symbol); });
-  input.addEventListener("blur", ()=>setTimeout(close, 120));
+  list.addEventListener("mousedown", e=>{ e.preventDefault(); const el = e.target.closest(".suggest-item"); if(el){ const r = items[+el.dataset.i]; pick(r.symbol, r.name); } });
+}
+function setPickerLabel(pickerId, name, symbol){
+  const root = document.getElementById(pickerId);
+  root.querySelector(".picker-label").textContent = name;
+  root.querySelector(".picker-sym").textContent = symbol || "";
 }
 
 function selectMarketSymbol(symbol){
@@ -755,6 +763,6 @@ function selectMarketSymbol(symbol){
   AUTO_JOBS.forEach(j=>{ if(j.panel==="market") j.last = Date.now(); });   // we're refreshing right now
   getQuote(); getDailyHistory(); getNews();
 }
-attachSymbolSearch("marketSymbol", "marketSuggest", selectMarketSymbol);
-attachSymbolSearch("wlSymbol", "wlSuggest", ()=>addWatchlistSymbol());
+attachSymbolPicker("marketPicker", "marketSymbol", selectMarketSymbol);
+attachSymbolPicker("wlPicker", "wlSymbol", symbol=>addWatchlistSymbol(symbol));
 document.getElementById("historyPeriod").addEventListener("change", getDailyHistory);

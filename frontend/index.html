@@ -275,9 +275,8 @@
       <h2>Quote &amp; Daily History</h2>
       <p class="muted">Search <b>any</b> listed company, ETF or index — NSE, BSE, US and more. No API key needed: live quotes and history come from Yahoo Finance (via <code>yfinance</code>).</p>
       <div class="row">
-        <div class="field symbol-search"><label>Company — choose from the list or type to search any listed company</label>
-          <div class="combo"><input id="marketSymbol" type="text" value="RELIANCE.NS" autocomplete="off" spellcheck="false" placeholder="Click to pick a popular stock, or type any company — e.g. Samsung, Tata Steel, AAPL"><button type="button" class="suggest-toggle" aria-label="Show popular stocks">▾</button></div>
-          <div class="suggest" id="marketSuggest" hidden></div>
+        <div class="field"><label>Company — open the list, or search any listed company</label>
+          <div class="picker" id="marketPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="marketSymbol" value="RELIANCE.NS">
         </div>
         <div class="field" style="flex:0 0 140px;"><label>History period</label>
           <select id="historyPeriod">
@@ -392,9 +391,8 @@
       <h2>Watchlist</h2>
       <p class="muted">No dedicated backend for this section — it reuses <code>GET /market/quote</code> from section 11 (no API key needed). Prices refresh automatically every 30 s while this tab is open, and price alerts are checked on every refresh.</p>
       <div class="btn-row">
-        <div class="field symbol-search" style="margin:0;min-width:260px;">
-          <div class="combo"><input id="wlSymbol" type="text" autocomplete="off" spellcheck="false" placeholder="Pick or search any company…"><button type="button" class="suggest-toggle" aria-label="Show popular stocks">▾</button></div>
-          <div class="suggest" id="wlSuggest" hidden></div>
+        <div class="field" style="margin:0;min-width:300px;">
+          <div class="picker" id="wlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Choose a company to add…</span><span class="picker-sym"></span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="wlSymbol" value="">
         </div>
         <button class="btn" onclick="addWatchlistSymbol()">Add to watchlist</button>
         <button class="btn secondary" onclick="refreshWatchlist()">Refresh all live prices</button>
