@@ -103,3 +103,17 @@ tr:hover td{background:#FAFBFD;}
 .key-card{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px;background:var(--light);}
 .key-card h3{margin:0 0 6px;font-size:14px;color:var(--navy);}
 .key-card .meta{font-size:12px;color:var(--muted);margin-top:6px;}
+
+/* symbol search (11 Stock Market, 14 Watchlist) */
+.symbol-search{position:relative;}
+.suggest{position:absolute;top:100%;left:0;right:0;z-index:20;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(19,34,74,.12);max-height:320px;overflow-y:auto;}
+.suggest-item{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;cursor:pointer;font-size:13.5px;}
+.suggest-item:hover,.suggest-item.active{background:var(--light);}
+.suggest-item .sym{font-weight:600;color:var(--navy);white-space:nowrap;}
+.suggest-item .exch{color:var(--muted);font-size:12px;white-space:nowrap;}
+.suggest-item .nm{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.suggest-empty{padding:9px 12px;color:var(--muted);font-size:13px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-2px 0 8px;}
+.chip{border:1px solid var(--border);background:#fff;color:var(--navy);border-radius:16px;padding:5px 11px;font-size:12.5px;cursor:pointer;}
+.chip:hover{border-color:var(--brand);color:var(--brand);}
+

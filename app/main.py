@@ -157,6 +157,11 @@ def _market(fn, *args):
         raise HTTPException(status_code=502, detail=f"Upstream data source failed: {e}")
 
 
+@app.get("/market/search", tags=["11 Stock Market"])
+def market_search(q: str = Query(..., min_length=1), limit: int = Query(8, ge=1, le=20)):
+    return {"query": q, "results": _market(market.search_symbols, q, limit)}
+
+
 @app.get("/market/quote", tags=["11 Stock Market"])
 def market_quote(symbol: str = Query(..., min_length=1)):
     return _market(market.get_quote, symbol)
@@ -169,7 +174,8 @@ def market_daily(symbol: str = Query(..., min_length=1),
 
 
 @app.get("/market/news", tags=["11 Stock Market"])
-def market_news(symbols: str = Query(..., min_length=1), limit: int = Query(10, ge=1, le=50)):
+def market_news(symbols: str = Query("", description="Tickers or search text; empty = general market news"),
+                limit: int = Query(10, ge=1, le=50)):
     return {"query": symbols, "data": _market(market.get_news, symbols, limit)}
 
 

@@ -4,8 +4,13 @@ market.py
 Live stock market data with **NO API key, no signup, no environment
 variable required** — everything runs off public, free endpoints:
 
+  * Company/ticker search        -> Yahoo Finance search (via `yfinance`)
   * Quotes & daily OHLCV history -> `yfinance` (reads public Yahoo Finance data)
   * News headlines               -> Google News' public RSS feed
+
+Any symbol Yahoo Finance lists works: NSE ("TATASTEEL.NS"), BSE
+("500325.BO"), US ("AAPL"), indices ("^NSEI"), ETFs, etc. A bare Indian
+ticker such as "TATASTEEL" is tried on NSE, then BSE, automatically.
 
 Responses are cached in memory for a short time (see the *_TTL constants)
 so bursts of requests — e.g. a watchlist refresh — don't get throttled by
@@ -26,8 +31,16 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
+import re
+
+import logging
+
 import requests
 import yfinance as yf
+
+# yfinance logs an error for every symbol it can't find; we try several
+# candidates per lookup and report failures ourselves.
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 # --------------------------------------------------------------------------
 # Symbol translation: this app's UI uses "RELIANCE.BSE"-style symbols
@@ -41,14 +54,6 @@ _KNOWN_SYMBOLS = {
     "INFY.BSE": "INFY.NS",
 }
 
-# Company names give Google News far better matches than bare tickers.
-_COMPANY_NAMES = {
-    "RELIANCE": "Reliance Industries",
-    "TCS": "Tata Consultancy Services",
-    "INFY": "Infosys",
-    "IBM": "IBM",
-}
-
 
 def _to_yahoo_symbol(symbol: str) -> str:
     symbol = symbol.strip().upper()
@@ -56,9 +61,18 @@ def _to_yahoo_symbol(symbol: str) -> str:
         return _KNOWN_SYMBOLS[symbol]
     if symbol.endswith(".BSE"):
         return symbol[:-4] + ".NS"   # generic fallback for any other "XXX.BSE" symbol
-    if symbol.endswith(".NS") or symbol.endswith(".BO"):
-        return symbol                 # already Yahoo-style
-    return symbol                     # plain ticker, e.g. "IBM", "AAPL"
+    if symbol.endswith(".NSE"):
+        return symbol[:-4] + ".NS"
+    return symbol                     # Yahoo-style already, or a plain ticker ("IBM")
+
+
+def _candidates(symbol: str) -> list[str]:
+    """Yahoo symbols to try, in order. A bare ticker that isn't a US listing
+    (e.g. "TATASTEEL") is retried on NSE and then BSE."""
+    yahoo = _to_yahoo_symbol(symbol)
+    if re.fullmatch(r"[A-Z0-9&-]+", yahoo):
+        return [yahoo, yahoo + ".NS", yahoo + ".BO"]
+    return [yahoo]
 
 
 # --------------------------------------------------------------------------
@@ -89,6 +103,73 @@ def _cached(key: str, ttl: int, fetch):
     return value
 
 
+# --------------------------------------------------------------------------
+# 0) COMPANY SEARCH  -- find the ticker for any company by name
+# --------------------------------------------------------------------------
+SEARCH_TTL = 60 * 60
+NAME_TTL = 24 * 60 * 60
+_SEARCH_TYPES = {"EQUITY", "ETF", "INDEX", "MUTUALFUND"}
+
+
+def _exchange_rank(symbol: str) -> int:
+    # India-first app: NSE listings, then BSE, then everything else;
+    # "-BL"/"-BE" style block-deal series last.
+    if "-" in symbol.split(".")[0]:
+        return 3
+    if symbol.endswith(".NS"):
+        return 0
+    if symbol.endswith(".BO"):
+        return 1
+    return 2
+
+
+def search_symbols(query: str, limit: int = 8) -> list[dict]:
+    """Companies/ETFs/indices matching `query` (a name or ticker).
+
+    Returns:
+        [{"symbol": "TATASTEEL.NS", "name": "Tata Steel Limited",
+          "exchange": "NSE", "type": "EQUITY"}, ...]
+    """
+    query = query.strip()
+    if not query:
+        return []
+    return _cached(f"search:{query.upper()}:{limit}", SEARCH_TTL,
+                   lambda: _fetch_search(query, limit))
+
+
+def _fetch_search(query: str, limit: int) -> list[dict]:
+    raw = yf.Search(query, max_results=max(limit * 2, 10), news_count=0).quotes or []
+    results = []
+    for i, q in enumerate(raw):
+        symbol = q.get("symbol")
+        if not symbol or q.get("quoteType") not in _SEARCH_TYPES:
+            continue
+        results.append((_exchange_rank(symbol), i, {
+            "symbol": symbol,
+            "name": q.get("longname") or q.get("shortname") or symbol,
+            "exchange": q.get("exchDisp") or q.get("exchange") or "",
+            "type": q.get("quoteType"),
+        }))
+    # Keep Yahoo's relevance order, but float Indian listings above foreign
+    # ones and push block-deal series to the end.
+    results.sort(key=lambda r: (r[0] == 3, r[0] == 2, r[1]))
+    return [r[2] for r in results[:limit]]
+
+
+def company_name(symbol: str) -> str | None:
+    """Full company name for a ticker, e.g. "HDFCBANK.NS" -> "HDFC Bank Limited"."""
+    def fetch():
+        for yahoo in _candidates(symbol):
+            for q in yf.Search(yahoo, max_results=5, news_count=0).quotes or []:
+                if (q.get("symbol") or "").upper() == yahoo:
+                    return q.get("longname") or q.get("shortname")
+        return None
+    try:
+        return _cached(f"name:{symbol.strip().upper()}", NAME_TTL, fetch)
+    except Exception:
+        return None
+
+
 def _r(x):
     return round(float(x), 2) if x is not None else None
 
@@ -113,56 +194,58 @@ def get_quote(symbol: str) -> dict:
 
 
 def _fetch_quote(symbol: str) -> dict:
-    yahoo_symbol = _to_yahoo_symbol(symbol)
+    for yahoo_symbol in _candidates(symbol):
+        try:
+            return _quote_for(symbol, yahoo_symbol)
+        except ValueError:
+            continue
+    raise ValueError(f"No quote data for '{symbol}'. Search by company name to find "
+                     f"the right ticker (e.g. TATASTEEL.NS for NSE, AAPL for US).")
+
+
+def _quote_for(symbol: str, yahoo_symbol: str) -> dict:
     ticker = yf.Ticker(yahoo_symbol)
 
-    price = prev_close = currency = None
-    try:
-        info = ticker.fast_info
-        price = info.get("last_price")
-        prev_close = info.get("previous_close")
-        currency = info.get("currency")
-    except Exception:
-        pass
+    # Daily bars first: one request that also tells us whether the symbol
+    # exists at all, so wrong guesses (e.g. bare "TATASTEEL") fail fast.
+    daily = ticker.history(period="1mo")
+    if daily.empty:
+        raise ValueError(f"No quote data returned for {yahoo_symbol}.")
+    currency = (ticker.history_metadata or {}).get("currency")
+    last = daily.iloc[-1]
+    price = float(last["Close"])
+    prev_close = float(daily["Close"].iloc[-2]) if len(daily) > 1 else None
+    day_open, day_high, day_low = float(last["Open"]), float(last["High"]), float(last["Low"])
+    volume = int(last["Volume"])
+    as_of = daily.index[-1].isoformat()
 
-    # The latest session's 1-minute bars give the last traded price, the
-    # day's range and the actual time of that trade. A 5-day window means
-    # weekends/holidays still return the most recent session.
-    as_of = day_open = day_high = day_low = volume = None
+    # The latest session's 1-minute bars give the last traded price and the
+    # actual time of that trade. A 5-day window means weekends/holidays
+    # still return the most recent session.
     try:
         intraday = ticker.history(period="5d", interval="1m")
         if not intraday.empty:
             last_day = intraday.index[-1].date()
+            if last_day > daily.index[-1].date():
+                # daily bar for today not published yet: yesterday's close is prev close
+                prev_close = price
             intraday = intraday[intraday.index.date == last_day]
             price = float(intraday["Close"].iloc[-1])
             day_open = float(intraday["Open"].iloc[0])
             day_high = float(intraday["High"].max())
             day_low = float(intraday["Low"].min())
-            volume = int(intraday["Volume"].sum())
+            volume = max(volume, int(intraday["Volume"].sum())) if last_day == daily.index[-1].date() \
+                else int(intraday["Volume"].sum())
             as_of = intraday.index[-1].isoformat()
     except Exception:
         pass
-
-    # fast_info is occasionally empty right after Yahoo rate-limits a burst
-    # of requests -- fall back to recent daily history.
-    if price is None or prev_close is None:
-        hist = ticker.history(period="5d")
-        if not hist.empty:
-            if price is None:
-                price = float(hist["Close"].iloc[-1])
-                as_of = hist.index[-1].isoformat()
-            if prev_close is None and len(hist) > 1:
-                prev_close = float(hist["Close"].iloc[-2])
-
-    if price is None:
-        raise ValueError(f"No quote data returned for {symbol} ({yahoo_symbol}). "
-                          f"Check the symbol is correct, or try again in a moment.")
 
     change = (price - prev_close) if prev_close else None
     change_pct = (change / prev_close * 100) if prev_close else None
     return {
         "symbol": symbol,
         "yahooSymbol": yahoo_symbol,
+        "name": company_name(yahoo_symbol) or yahoo_symbol,
         "price": _r(price),
         "change": _r(change),
         "changePercent": f"{change_pct:.2f}" if change_pct is not None else None,
@@ -194,11 +277,13 @@ def get_daily_history(symbol: str, period: str = "3mo") -> list[dict]:
 
 
 def _fetch_history(symbol: str, period: str) -> list[dict]:
-    yahoo_symbol = _to_yahoo_symbol(symbol)
-    hist = yf.Ticker(yahoo_symbol).history(period=period)
-    if hist.empty:
-        raise ValueError(f"No history returned for {symbol} ({yahoo_symbol}). "
-                          f"Check the symbol is correct, or try again in a moment.")
+    for yahoo_symbol in _candidates(symbol):
+        hist = yf.Ticker(yahoo_symbol).history(period=period)
+        if not hist.empty:
+            break
+    else:
+        raise ValueError(f"No history for '{symbol}'. Search by company name to find "
+                         f"the right ticker (e.g. TATASTEEL.NS for NSE, AAPL for US).")
 
     rows = []
     for idx, row in hist.iterrows():
@@ -219,8 +304,8 @@ def _fetch_history(symbol: str, period: str) -> list[dict]:
 def get_news(symbols: str, limit: int = 10) -> list[dict]:
     """Recent headlines (last 7 days) for the given symbols/query, newest first.
 
-    `symbols` can be comma-separated tickers ("RELIANCE.BSE,TCS.BSE") or
-    plain search text ("Reliance Industries").
+    `symbols` can be comma-separated tickers ("RELIANCE.NS,TCS.NS"), plain
+    search text ("Reliance Industries"), or empty for general market news.
 
     Returns:
         [{"title": "...", "source": "...",
@@ -230,28 +315,42 @@ def get_news(symbols: str, limit: int = 10) -> list[dict]:
                    lambda: _fetch_news(symbols, limit))
 
 
+MARKET_NEWS_QUERY = '"stock market" (Sensex OR Nifty)'
+_NAME_SUFFIX = re.compile(r"[\s,.]+(limited|ltd|inc|corp|corporation|co|plc|company)\.?$", re.I)
+
+
 def _news_term(token: str) -> str:
+    """Tickers become the company's name ("HDFCBANK.NS" -> "HDFC Bank"),
+    which matches far more headlines than the bare ticker."""
     token = token.strip()
-    base = token.upper().split(".")[0]
-    if base in _COMPANY_NAMES:
-        return f'"{_COMPANY_NAMES[base]}"'
-    if "." in token or (token.isupper() and " " not in token):
-        return f"{base} share"         # unknown ticker: bias toward market coverage
-    return token                       # free-text query
+    looks_like_ticker = " " not in token and (token.isupper() or re.search(r"[.^=]", token))
+    if not looks_like_ticker:
+        return token                   # free-text query
+    name = company_name(token)
+    if name:
+        while _NAME_SUFFIX.search(name):
+            name = _NAME_SUFFIX.sub("", name)
+        return f'"{name}"'
+    base = _to_yahoo_symbol(token).split(".")[0].lstrip("^")
+    return f"{base} share"             # unknown ticker: bias toward market coverage
 
 
 def _fetch_news(symbols: str, limit: int) -> list[dict]:
-    terms = [_news_term(t) for t in symbols.split(",") if t.strip()]
-    if not terms:
-        raise ValueError("Enter at least one symbol or search term.")
+    terms = [_news_term(t) for t in symbols.split(",") if t.strip()] or [MARKET_NEWS_QUERY]
     # `when:7d` restricts Google News to the last week so results stay current.
     query = " OR ".join(terms) + " when:7d"
-    resp = requests.get(
-        "https://news.google.com/rss/search",
-        params={"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"},
-        headers={"User-Agent": "Mozilla/5.0"},  # Google News RSS 403s with no UA
-        timeout=10,
-    )
+    # Google News occasionally answers a valid query with a transient 404/5xx,
+    # so retry a couple of times before giving up.
+    for attempt in range(3):
+        resp = requests.get(
+            "https://news.google.com/rss/search",
+            params={"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"},
+            headers={"User-Agent": "Mozilla/5.0"},  # Google News RSS 403s with no UA
+            timeout=10,
+        )
+        if resp.ok:
+            break
+        time.sleep(0.5 * (attempt + 1))
     resp.raise_for_status()
     root = ET.fromstring(resp.content)
 

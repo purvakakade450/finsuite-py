@@ -369,10 +369,11 @@ async function getQuote(){
   const box = document.getElementById("marketStatus");
   box.textContent = "Fetching live quote…";
   try{
-    const symbol = document.getElementById("marketSymbol").value;
+    const symbol = document.getElementById("marketSymbol").value.trim();
+    if(!symbol){ box.textContent = "Type a company name or ticker above."; return; }
     const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(symbol)}`);
     const cur = currencySymbol(q.currency);
-    box.innerHTML = `<b>${q.symbol}</b> (${q.yahooSymbol}): <b>${cur}${q.price}</b>` +
+    box.innerHTML = `<b>${escapeHtml(q.name)}</b> <span class="muted">(${escapeHtml(q.yahooSymbol)})</span>: <b>${cur}${q.price}</b>` +
       (q.change!=null ? ` <span class="${q.change>=0?'badge-good':'badge-warn'}">${q.change>=0?"+":""}${q.change} (${q.changePercent}%)</span>` : "") +
       (q.previousClose!=null ? `<br>Prev close ${cur}${q.previousClose}` : "") +
       (q.open!=null ? ` · Open ${cur}${q.open} · Day range ${cur}${q.dayLow} – ${cur}${q.dayHigh} · Volume ${q.volume.toLocaleString()}` : "") +
@@ -380,16 +381,23 @@ async function getQuote(){
   }catch(e){ box.textContent = "Error: "+e.message; }
 }
 async function getDailyHistory(){
-  const box = document.getElementById("marketStatus");
-  box.textContent = "Fetching daily history…";
+  const status = document.getElementById("historyStatus");
+  status.textContent = "Fetching daily history…";
   try{
-    const symbol = document.getElementById("marketSymbol").value;
-    const raw = await api("GET", `/market/daily?symbol=${encodeURIComponent(symbol)}`);
+    const symbol = document.getElementById("marketSymbol").value.trim();
+    const period = document.getElementById("historyPeriod").value;
+    const raw = await api("GET", `/market/daily?symbol=${encodeURIComponent(symbol)}&period=${period}`);
     const rows = raw.rows || [];
-    if(!rows.length){ box.textContent = "No history returned — check the symbol."; return; }
-    box.textContent = `Loaded ${rows.length} days for ${symbol} (showing latest 30).`;
+    if(!rows.length){ status.textContent = "No history returned — check the symbol."; return; }
+    const first = rows[0].Close, last = rows[rows.length-1].Close, pct = (last-first)/first*100;
+    status.innerHTML = `${escapeHtml(symbol)}: ${rows.length} trading days, ${rows[0].Date} → ${rows[rows.length-1].Date} · ` +
+      `<b class="${pct>=0?'badge-good':'badge-warn'}">${pct>=0?"+":""}${pct.toFixed(2)}%</b> over the period (table shows latest 30).`;
+    document.getElementById("historyChartBox").hidden = false;
+    lineChart("historyChart","history", rows.map(r=>r.Date), [
+      { label:`${symbol} close`, data:rows.map(r=>r.Close), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.10)", fill:true, tension:.15, pointRadius:0, borderWidth:2 },
+    ]);
     renderTable("marketTable", rows.slice(-30).reverse(), ["Date","Open","High","Low","Close","Volume"], 30);
-  }catch(e){ box.textContent = "Error: "+e.message; }
+  }catch(e){ status.textContent = "Error: "+e.message; }
 }
 async function getNews(){
   const out = document.getElementById("newsOut");
@@ -468,21 +476,24 @@ async function calcRange(){
 const WATCHLIST = [];
 const ALERTS = [];
 function addWatchlistSymbol(){
-  const symbol = document.getElementById("wlSymbol").value;
+  const input = document.getElementById("wlSymbol");
+  const symbol = input.value.trim().toUpperCase();
+  if(!symbol){ input.focus(); return; }
+  input.value = "";
   if(!WATCHLIST.some(w=>w.symbol===symbol)) WATCHLIST.push({symbol, price:null, change:null, changePercent:null, day:null});
-  renderWatchlist(); refreshAlertSymbolSelect();
+  renderWatchlist(); refreshAlertSymbolSelect(); refreshWatchlist();
 }
 function removeWatchlistSymbol(i){ WATCHLIST.splice(i,1); renderWatchlist(); refreshAlertSymbolSelect(); }
 function renderWatchlist(){
   const table = document.getElementById("wlTable");
   table.innerHTML = `<tr><th>Symbol</th><th>Price</th><th>Change</th><th>%</th><th>As of</th><th></th></tr>` +
-    WATCHLIST.map((w,i)=>`<tr><td>${w.symbol}</td><td>${w.price??"—"}</td><td>${w.change??"—"}</td><td>${w.changePercent??"—"}</td><td>${w.day??"—"}</td><td><button class="btn secondary" onclick="removeWatchlistSymbol(${i})">Remove</button></td></tr>`).join("");
+    WATCHLIST.map((w,i)=>`<tr><td><b>${escapeHtml(w.symbol)}</b>${w.name?`<div class="muted" style="margin:0;font-size:12px;">${escapeHtml(w.name)}</div>`:""}</td><td>${w.price??"—"}</td><td>${w.change??"—"}</td><td>${w.changePercent??"—"}</td><td>${w.day??"—"}</td><td><button class="btn secondary" onclick="removeWatchlistSymbol(${i})">Remove</button></td></tr>`).join("");
 }
 async function refreshWatchlist(){
   for(const w of WATCHLIST){
     try{
       const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(w.symbol)}`);
-      if(q && q.price!=null) Object.assign(w, { price:q.price, change:q.change, changePercent:q.changePercent, day:q.asOf?new Date(q.asOf).toLocaleString():"" });
+      if(q && q.price!=null) Object.assign(w, { name:q.name, price:q.price, change:q.change, changePercent:q.changePercent, day:q.asOf?new Date(q.asOf).toLocaleString():"" });
       else w.price = "no data";
     }catch(e){ w.price = "Error"; }
   }
@@ -562,6 +573,7 @@ refreshAlertSymbolSelect();
    ============================================================ */
 const AUTO_JOBS = [
   { panel:"market",    toggle:"quoteAuto", every:30*1000,   run:getQuote,         last:0 },
+  { panel:"market",    toggle:"quoteAuto", every:10*60*1000, run:getDailyHistory, last:0 },
   { panel:"market",    toggle:"newsAuto",  every:5*60*1000, run:getNews,          last:0 },
   { panel:"watchlist", toggle:"wlAuto",    every:30*1000,   run:()=>WATCHLIST.length && refreshWatchlist(), last:0 },
 ];
@@ -577,4 +589,52 @@ function runAutoRefresh(force=false){
 }
 setInterval(runAutoRefresh, 5000);
 document.addEventListener("visibilitychange", ()=>runAutoRefresh());
-document.getElementById("marketSymbol").addEventListener("change", ()=>{ getQuote(); AUTO_JOBS[0].last = Date.now(); });
+
+/* ============================================================
+   SYMBOL SEARCH — type any company name or ticker, pick from
+   GET /market/search suggestions (or just press Enter on a ticker).
+   ============================================================ */
+function attachSymbolSearch(inputId, boxId, onPick){
+  const input = document.getElementById(inputId), box = document.getElementById(boxId);
+  let timer = null, items = [], active = -1, seq = 0;
+  const close = ()=>{ box.hidden = true; active = -1; };
+  const pick = (symbol)=>{ input.value = symbol; close(); onPick(symbol); };
+  const render = ()=>{
+    box.innerHTML = items.length
+      ? items.map((r,i)=>`<div class="suggest-item${i===active?" active":""}" data-i="${i}"><span class="sym">${escapeHtml(r.symbol)}</span><span class="nm">${escapeHtml(r.name)}</span><span class="exch">${escapeHtml(r.exchange)}${r.type!=="EQUITY"?" · "+escapeHtml(r.type):""}</span></div>`).join("")
+      : `<div class="suggest-empty">No matches — try the company's full name, or press Enter to use “${escapeHtml(input.value.trim())}” as a ticker.</div>`;
+    box.hidden = false;
+  };
+  input.addEventListener("input", ()=>{
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if(q.length < 2){ close(); return; }
+    timer = setTimeout(async ()=>{
+      const my = ++seq;
+      try{
+        const r = await api("GET", `/market/search?q=${encodeURIComponent(q)}`);
+        if(my !== seq || document.activeElement !== input) return;   // a newer keystroke won
+        items = r.results || []; active = -1; render();
+      }catch(e){ items = []; close(); }
+    }, 250);
+  });
+  input.addEventListener("keydown", e=>{
+    if(e.key === "ArrowDown" && items.length && !box.hidden){ active = (active+1) % items.length; render(); e.preventDefault(); }
+    else if(e.key === "ArrowUp" && items.length && !box.hidden){ active = (active-1+items.length) % items.length; render(); e.preventDefault(); }
+    else if(e.key === "Enter"){ e.preventDefault(); const v = input.value.trim(); if(active>=0 && !box.hidden) pick(items[active].symbol); else if(v) pick(v.toUpperCase()); }
+    else if(e.key === "Escape") close();
+  });
+  box.addEventListener("mousedown", e=>{ const el = e.target.closest(".suggest-item"); if(el){ e.preventDefault(); pick(items[+el.dataset.i].symbol); } });
+  input.addEventListener("blur", ()=>setTimeout(close, 100));
+}
+
+function selectMarketSymbol(symbol){
+  document.getElementById("marketSymbol").value = symbol;
+  document.getElementById("newsSymbols").value = symbol;
+  AUTO_JOBS.forEach(j=>{ if(j.panel==="market") j.last = Date.now(); });   // we're refreshing right now
+  getQuote(); getDailyHistory(); getNews();
+}
+attachSymbolSearch("marketSymbol", "marketSuggest", selectMarketSymbol);
+attachSymbolSearch("wlSymbol", "wlSuggest", ()=>addWatchlistSymbol());
+document.querySelectorAll("#popularChips .chip").forEach(c=>c.addEventListener("click", ()=>selectMarketSymbol(c.dataset.symbol)));
+document.getElementById("historyPeriod").addEventListener("change", getDailyHistory);

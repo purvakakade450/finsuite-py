@@ -273,16 +273,34 @@
   <section id="panel-market" class="panel">
     <div class="card">
       <h2>Quote &amp; Daily History</h2>
-      <p class="muted">No API key needed — live quotes and daily history come straight from Yahoo Finance (via <code>yfinance</code>), free with no signup.</p>
+      <p class="muted">Search <b>any</b> listed company, ETF or index — NSE, BSE, US and more. No API key needed: live quotes and history come from Yahoo Finance (via <code>yfinance</code>).</p>
       <div class="row">
-        <div class="field"><label>Symbol</label>
-          <select id="marketSymbol">
-            <option value="RELIANCE.BSE">Reliance Industries (RELIANCE.BSE)</option>
-            <option value="TCS.BSE">Tata Consultancy Services (TCS.BSE)</option>
-            <option value="INFY.BSE">Infosys (INFY.BSE)</option>
-            <option value="IBM">IBM (demo-friendly)</option>
+        <div class="field symbol-search"><label>Company name or ticker</label>
+          <input id="marketSymbol" type="text" value="RELIANCE.NS" autocomplete="off" spellcheck="false" placeholder="e.g. Tata Steel, HDFC Bank, Eternal, AAPL, Nifty 50">
+          <div class="suggest" id="marketSuggest" hidden></div>
+        </div>
+        <div class="field" style="flex:0 0 140px;"><label>History period</label>
+          <select id="historyPeriod">
+            <option value="1mo">1 month</option><option value="3mo" selected>3 months</option>
+            <option value="6mo">6 months</option><option value="1y">1 year</option>
+            <option value="5y">5 years</option><option value="max">Max</option>
           </select>
         </div>
+      </div>
+      <div class="chips" id="popularChips">
+        <span class="muted" style="margin:0;">Popular:</span>
+        <button class="chip" data-symbol="^NSEI">NIFTY 50</button>
+        <button class="chip" data-symbol="^BSESN">SENSEX</button>
+        <button class="chip" data-symbol="RELIANCE.NS">Reliance</button>
+        <button class="chip" data-symbol="TCS.NS">TCS</button>
+        <button class="chip" data-symbol="HDFCBANK.NS">HDFC Bank</button>
+        <button class="chip" data-symbol="INFY.NS">Infosys</button>
+        <button class="chip" data-symbol="ICICIBANK.NS">ICICI Bank</button>
+        <button class="chip" data-symbol="SBIN.NS">SBI</button>
+        <button class="chip" data-symbol="BHARTIARTL.NS">Bharti Airtel</button>
+        <button class="chip" data-symbol="ITC.NS">ITC</button>
+        <button class="chip" data-symbol="TATASTEEL.NS">Tata Steel</button>
+        <button class="chip" data-symbol="AAPL">Apple</button>
       </div>
       <div class="btn-row">
         <button class="btn" onclick="getQuote()">Get live quote</button>
@@ -290,16 +308,19 @@
         <label class="muted" style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="quoteAuto" checked> Auto-refresh quote every 30 s</label>
       </div>
       <div class="result-box" id="marketStatus">—</div>
+      <div class="muted" id="historyStatus" style="margin-top:12px;"></div>
+      <div class="chart-box" id="historyChartBox" hidden><canvas id="historyChart"></canvas></div>
       <div class="table-wrap"><table id="marketTable"></table></div>
     </div>
     <div class="card">
       <h2>News</h2>
-      <p class="muted">No API key needed — headlines come from Google News' public RSS feed.</p>
+      <p class="muted">Latest headlines from the last 7 days, newest first, via Google News' public RSS feed (no API key). Picking a company above loads its news automatically; leave the box empty for overall market news.</p>
       <div class="row">
-        <div class="field"><label>Symbols (comma-separated)</label><input id="newsSymbols" type="text" value="RELIANCE.BSE"></div>
+        <div class="field"><label>Tickers or topic (comma-separated)</label><input id="newsSymbols" type="text" value="RELIANCE.NS" placeholder="Empty = overall market news"></div>
       </div>
       <div class="btn-row">
         <button class="btn" onclick="getNews()">Fetch news</button>
+        <button class="btn secondary" onclick="document.getElementById('newsSymbols').value='';getNews()">Market news</button>
         <label class="muted" style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="newsAuto" checked> Auto-refresh news every 5 min</label>
       </div>
       <div id="newsOut" style="margin-top:12px;"></div>
@@ -377,11 +398,10 @@
       <h2>Watchlist</h2>
       <p class="muted">No dedicated backend for this section — it reuses <code>GET /market/quote</code> from section 11 (no API key needed). Prices refresh automatically every 30 s while this tab is open, and price alerts are checked on every refresh.</p>
       <div class="btn-row">
-        <select id="wlSymbol">
-          <option value="RELIANCE.BSE">Reliance Industries</option>
-          <option value="TCS.BSE">Tata Consultancy Services</option>
-          <option value="INFY.BSE">Infosys</option>
-        </select>
+        <div class="field symbol-search" style="margin:0;min-width:260px;">
+          <input id="wlSymbol" type="text" autocomplete="off" spellcheck="false" placeholder="Search any company or ticker…">
+          <div class="suggest" id="wlSuggest" hidden></div>
+        </div>
         <button class="btn" onclick="addWatchlistSymbol()">Add to watchlist</button>
         <button class="btn secondary" onclick="refreshWatchlist()">Refresh all live prices</button>
         <label class="muted" style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="wlAuto" checked> Auto-refresh every 30 s</label>
