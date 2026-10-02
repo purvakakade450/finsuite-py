@@ -361,32 +361,40 @@ MARKET_NEWS_QUERY = '"stock market" (Sensex OR Nifty)'
 _NAME_SUFFIX = re.compile(r"[\s,.]+(limited|ltd|inc|corp|corporation|co|plc|company)\.?$", re.I)
 
 
-def _news_term(token: str) -> str:
-    """Tickers become the company's name ("HDFCBANK.NS" -> "HDFC Bank"),
-    which matches far more headlines than the bare ticker."""
+def _squash(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def _news_keywords(token: str) -> list[str] | None:
+    """Names a headline must contain to be about this ticker, e.g.
+    "DMART.NS" -> ["Avenue Supermarts", "DMART"], "TCS.NS" -> ["Tata
+    Consultancy Services", "TCS"]. None for free-text queries."""
     token = token.strip()
     looks_like_ticker = " " not in token and (token.isupper() or re.search(r"[.^=]", token))
     if not looks_like_ticker:
-        return token                   # free-text query
-    name = company_name(token)
-    if name:
-        while _NAME_SUFFIX.search(name):
-            name = _NAME_SUFFIX.sub("", name)
-        return f'"{name}"'
+        return None
     base = _to_yahoo_symbol(token).split(".")[0].lstrip("^")
-    return f"{base} share"             # unknown ticker: bias toward market coverage
+    name = company_name(token)
+    if not name:
+        return [base]
+    while _NAME_SUFFIX.search(name):
+        name = _NAME_SUFFIX.sub("", name)
+    keywords = [name]
+    # The ticker is often the brand people write ("DMart", "TCS", "INFY");
+    # skip it when it's just the name squashed together ("TATASTEEL").
+    if len(base) >= 3 and _squash(base) not in _squash(name):
+        keywords.append(base)
+    return keywords
 
 
-def _fetch_news(symbols: str, limit: int) -> list[dict]:
-    terms = [_news_term(t) for t in symbols.split(",") if t.strip()] or [MARKET_NEWS_QUERY]
+def _google_news(query: str) -> list[dict]:
     # `when:7d` restricts Google News to the last week so results stay current.
-    query = " OR ".join(terms) + " when:7d"
     # Google News occasionally answers a valid query with a transient 404/5xx,
     # so retry a couple of times before giving up.
     for attempt in range(3):
         resp = requests.get(
             "https://news.google.com/rss/search",
-            params={"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"},
+            params={"q": query + " when:7d", "hl": "en-IN", "gl": "IN", "ceid": "IN:en"},
             headers={"User-Agent": "Mozilla/5.0"},  # Google News RSS 403s with no UA
             timeout=10,
         )
@@ -394,10 +402,9 @@ def _fetch_news(symbols: str, limit: int) -> list[dict]:
             break
         time.sleep(0.5 * (attempt + 1))
     resp.raise_for_status()
-    root = ET.fromstring(resp.content)
 
     items = []
-    for item in root.findall("./channel/item"):
+    for item in ET.fromstring(resp.content).findall("./channel/item"):
         source = (item.findtext("source") or "").strip()
         title = (item.findtext("title") or "").strip()
         if source and title.endswith(f" - {source}"):
@@ -406,15 +413,50 @@ def _fetch_news(symbols: str, limit: int) -> list[dict]:
             published = parsedate_to_datetime(item.findtext("pubDate") or "")
         except (TypeError, ValueError):
             published = None
-        items.append((published or datetime.min.replace(tzinfo=timezone.utc), {
+        items.append({
             "title": title,
             "source": source,
             "published_at": published.isoformat() if published else "",
             "link": (item.findtext("link") or "").strip(),
-        }))
+            "_ts": published or datetime.min.replace(tzinfo=timezone.utc),
+        })
+    return items
 
-    items.sort(key=lambda pair: pair[0], reverse=True)
-    return [article for _, article in items[:limit]]
+
+def _fetch_news(symbols: str, limit: int) -> list[dict]:
+    tokens = [t.strip() for t in symbols.split(",") if t.strip()]
+    keyword_sets = [_news_keywords(t) for t in tokens]
+    keywords = [k for ks in keyword_sets if ks for k in ks]
+    free_text = [t for t, ks in zip(tokens, keyword_sets) if ks is None]
+
+    if not tokens:
+        items = _google_news(MARKET_NEWS_QUERY)
+    else:
+        # Headlines that name the company first; a looser full-text search
+        # only tops up if there aren't enough of those. Full-text matching
+        # alone surfaces pages that merely mention the company somewhere
+        # (index pages, rich lists, other companies' quote pages).
+        parts = [f'intitle:"{k}"' for k in keywords] + free_text
+        items = _google_news(" OR ".join(parts))
+        if keywords:
+            wanted = [_squash(k) for k in keywords]
+            relevant = lambda a: any(w in _squash(a["title"]) for w in wanted)
+            items = [a for a in items if relevant(a)]
+            if len(items) < limit:
+                loose = _google_news(" OR ".join([f'"{k}"' for k in keywords] + free_text))
+                items += [a for a in loose if relevant(a)]
+
+    # newest first, dropping syndicated copies of the same story
+    items.sort(key=lambda a: a["_ts"], reverse=True)
+    seen, unique = set(), []
+    for a in items:
+        key = _squash(a["title"])[:60]
+        if key in seen or a["link"] in seen:
+            continue
+        seen.update((key, a["link"]))
+        del a["_ts"]
+        unique.append(a)
+    return unique[:limit]
 
 
 # --------------------------------------------------------------------------
