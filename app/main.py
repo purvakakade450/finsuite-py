@@ -1,5 +1,5 @@
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -145,8 +145,40 @@ def knowledge_glossary():
 
 
 # ---------------------------------------------------------------------------
-# 11 Stock market workspace — live data, no API key required (
+# 11 Stock market workspace — live data, no API key required (yfinance +
+#    Google News RSS, see app/market.py)
+# ---------------------------------------------------------------------------
+def _market(fn, *args):
+    try:
+        return fn(*args)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Upstream data source failed: {e}")
 
+
+@app.get("/market/quote", tags=["11 Stock Market"])
+def market_quote(symbol: str = Query(..., min_length=1)):
+    return _market(market.get_quote, symbol)
+
+
+@app.get("/market/daily", tags=["11 Stock Market"])
+def market_daily(symbol: str = Query(..., min_length=1),
+                 period: str = Query("3mo", pattern="^(1mo|3mo|6mo|1y|2y|5y|max)$")):
+    return {"symbol": symbol, "rows": _market(market.get_daily_history, symbol, period)}
+
+
+@app.get("/market/news", tags=["11 Stock Market"])
+def market_news(symbols: str = Query(..., min_length=1), limit: int = Query(10, ge=1, le=50)):
+    return {"query": symbols, "data": _market(market.get_news, symbols, limit)}
+
+
+# ---------------------------------------------------------------------------
+# 12 Growth & target planner
+# ---------------------------------------------------------------------------
+@app.post("/planner/what-if", tags=["12 Growth & Target Planner"])
+def planner_what_if(body: s.WhatIfIn):
+    return _wrap(calc.calc_what_if, body.amount, body.price_then, body.price_now, body.days_held)
 
 
 @app.post("/planner/target-plan", tags=["12 Growth & Target Planner"])
@@ -193,6 +225,42 @@ def api_keys():
 @app.get("/api/status", tags=["Meta"])
 def api_status():
     return {"status": "ok", "docs": "/docs"}
+
+
+@app.get("/about", tags=["16 About"])
+def about():
+    tag_counts = {}
+    for route in app.routes:
+        for tag in getattr(route, "tags", []) or []:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+    sections = [t for t in sorted(tag_counts) if t[:2].isdigit()]
+    return {
+        "name": app.title,
+        "description": app.description,
+        "version": app.version,
+        "sections": sections,
+        "endpoint_count": sum(tag_counts.values()),
+        "tech_stack": ["FastAPI", "Uvicorn", "Pandas", "NumPy", "scikit-learn", "yfinance"],
+        "about_text": (
+            "FinSuite is a full-stack finance web application covering personal finance ratios, "
+            "AI-assisted analysis, loan and credit risk screening, portfolio and goal planning, "
+            "live stock market data, machine-learning price prediction, and a built-in finance "
+            "glossary — all in one console. Every calculator and data lookup on this site is "
+            "powered by a documented FastAPI REST endpoint (see /docs); this page is a thin "
+            "client that calls those endpoints directly and renders the results."
+        ),
+        "why_it_matters": (
+            "Most people make financial decisions — should I buy this stock, can I afford this loan, "
+            "how much should I save each month — without the tools professionals use to answer them. "
+            "FinSuite closes that gap by putting real financial-ratio math, risk scoring, and "
+            "AI/ML-driven forecasting in one free, easy-to-use console, so a student, a first-time "
+            "investor, or a small saver can run the same kind of analysis a bank or analyst would, "
+            "understand exactly why a result came out the way it did (every tool explains its formula), "
+            "and make a more informed decision — instead of guessing or relying on someone else's tip."
+        ),
+        "developed_by": "Purva Gajanan Kakade",
+        "guidance": "Prof. Ashish Singh (SJMSOM, IIT Bombay)",
+    }
 
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")

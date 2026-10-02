@@ -45,6 +45,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+    runAutoRefresh(true);
   });
 });
 
@@ -356,15 +357,26 @@ async function calcEmergencyFund(){
    11 STOCK MARKET WORKSPACE -> GET /market/quote|daily|news
    No API key needed — quotes/history via yfinance, news via Google News RSS.
    ============================================================ */
+function currencySymbol(code){ return ({INR:"₹",USD:"$",EUR:"€",GBP:"£",JPY:"¥"})[code] || (code ? code+" " : ""); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]); }
+function timeAgo(iso){
+  const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+  if(mins < 60) return `${Math.max(mins,1)} min ago`;
+  if(mins < 1440) return `${Math.round(mins/60)} h ago`;
+  return new Date(iso).toLocaleDateString();
+}
 async function getQuote(){
   const box = document.getElementById("marketStatus");
   box.textContent = "Fetching live quote…";
   try{
     const symbol = document.getElementById("marketSymbol").value;
     const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(symbol)}`);
-    box.textContent = `${symbol}: ₹${q.price}` +
-      (q.change!=null ? ` (${q.change>=0?"+":""}${q.change}, ${q.changePercent}%)` : "") +
-      (q.previousClose!=null ? ` — previous close ₹${q.previousClose}` : "");
+    const cur = currencySymbol(q.currency);
+    box.innerHTML = `<b>${q.symbol}</b> (${q.yahooSymbol}): <b>${cur}${q.price}</b>` +
+      (q.change!=null ? ` <span class="${q.change>=0?'badge-good':'badge-warn'}">${q.change>=0?"+":""}${q.change} (${q.changePercent}%)</span>` : "") +
+      (q.previousClose!=null ? `<br>Prev close ${cur}${q.previousClose}` : "") +
+      (q.open!=null ? ` · Open ${cur}${q.open} · Day range ${cur}${q.dayLow} – ${cur}${q.dayHigh} · Volume ${q.volume.toLocaleString()}` : "") +
+      (q.asOf ? `<div class="muted" style="margin-top:4px;">Last trade: ${new Date(q.asOf).toLocaleString()}</div>` : "");
   }catch(e){ box.textContent = "Error: "+e.message; }
 }
 async function getDailyHistory(){
@@ -386,7 +398,7 @@ async function getNews(){
     const symbols = document.getElementById("newsSymbols").value;
     const raw = await api("GET", `/market/news?symbols=${encodeURIComponent(symbols)}&limit=10`);
     const items = raw.data || [];
-    out.innerHTML = items.length ? items.map(a=>`<div class="result-box"><b>${a.title}</b><div class="muted" style="margin-top:4px;">${a.source||""} · ${(a.published_at||"").slice(0,16)}</div></div>`).join("") : "No news items returned.";
+    out.innerHTML = items.length ? items.map(a=>`<div class="result-box"><a href="${escapeHtml(a.link)}" target="_blank" rel="noopener"><b>${escapeHtml(a.title)}</b></a><div class="muted" style="margin-top:4px;">${escapeHtml(a.source||"")}${a.published_at?" · "+timeAgo(a.published_at):""}</div></div>`).join("") : "No news in the last 7 days for that query.";
   }catch(e){ out.textContent = "Error: "+e.message; }
 }
 
@@ -470,7 +482,7 @@ async function refreshWatchlist(){
   for(const w of WATCHLIST){
     try{
       const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(w.symbol)}`);
-      if(q && q.price!=null) Object.assign(w, { price:q.price, change:q.change, changePercent:q.changePercent, day:q.previousClose!=null?`prev close ₹${q.previousClose}`:"" });
+      if(q && q.price!=null) Object.assign(w, { price:q.price, change:q.change, changePercent:q.changePercent, day:q.asOf?new Date(q.asOf).toLocaleString():"" });
       else w.price = "no data";
     }catch(e){ w.price = "Error"; }
   }
@@ -522,3 +534,47 @@ refreshAlertSymbolSelect();
       </div>`).join("");
   }catch(e){ document.getElementById("keysOut").textContent = "Could not load: "+e.message; }
 })();
+
+/* ============================================================
+   16 ABOUT -> GET /about
+   ============================================================ */
+(async function loadAbout(){
+  try{
+    const r = await api("GET","/about");
+    document.getElementById("aboutOut").innerHTML = `
+      <div class="result-box">${r.about_text}</div>
+      <div class="card" style="margin-top:12px;background:rgba(14,124,123,.06);">
+        <h3 style="margin-top:0;">Why this matters</h3>
+        <p style="margin:0;">${r.why_it_matters}</p>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div class="field"><label>Version</label><div>${r.version}</div></div>
+        <div class="field"><label>Endpoints</label><div>${r.endpoint_count} across ${r.sections.length} sections</div></div>
+      </div>
+      <div class="meta" style="margin-top:8px;">Tech stack: ${r.tech_stack.join(", ")}</div>`;
+  }catch(e){ document.getElementById("aboutOut").textContent = "Could not load: "+e.message; }
+})();
+
+/* ============================================================
+   AUTO-REFRESH for live market data (sections 11 & 14)
+   Each job only runs while its tab is open, the browser tab is visible
+   and its checkbox is ticked — so nothing is fetched in the background.
+   ============================================================ */
+const AUTO_JOBS = [
+  { panel:"market",    toggle:"quoteAuto", every:30*1000,   run:getQuote,         last:0 },
+  { panel:"market",    toggle:"newsAuto",  every:5*60*1000, run:getNews,          last:0 },
+  { panel:"watchlist", toggle:"wlAuto",    every:30*1000,   run:()=>WATCHLIST.length && refreshWatchlist(), last:0 },
+];
+function runAutoRefresh(force=false){
+  if(document.hidden) return;
+  const now = Date.now();
+  for(const job of AUTO_JOBS){
+    const panel = document.getElementById("panel-"+job.panel);
+    const toggle = document.getElementById(job.toggle);
+    if(!panel || !panel.classList.contains("active") || !toggle || !toggle.checked) continue;
+    if(force || now - job.last >= job.every){ job.last = now; job.run(); }
+  }
+}
+setInterval(runAutoRefresh, 5000);
+document.addEventListener("visibilitychange", ()=>runAutoRefresh());
+document.getElementById("marketSymbol").addEventListener("change", ()=>{ getQuote(); AUTO_JOBS[0].last = Date.now(); });

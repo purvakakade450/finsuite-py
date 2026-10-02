@@ -30,6 +30,7 @@
   <button class="tab" data-tab="tax">13 Portfolio &amp; Tax</button>
   <button class="tab" data-tab="watchlist">14 Watchlist &amp; Alerts</button>
   <button class="tab" data-tab="keys">15 API Key Directory</button>
+  <button class="tab" data-tab="about">16 About</button>
 </nav>
 
 <main>
@@ -286,6 +287,7 @@
       <div class="btn-row">
         <button class="btn" onclick="getQuote()">Get live quote</button>
         <button class="btn secondary" onclick="getDailyHistory()">Fetch daily history</button>
+        <label class="muted" style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="quoteAuto" checked> Auto-refresh quote every 30 s</label>
       </div>
       <div class="result-box" id="marketStatus">—</div>
       <div class="table-wrap"><table id="marketTable"></table></div>
@@ -296,7 +298,10 @@
       <div class="row">
         <div class="field"><label>Symbols (comma-separated)</label><input id="newsSymbols" type="text" value="RELIANCE.BSE"></div>
       </div>
-      <button class="btn" onclick="getNews()">Fetch news</button>
+      <div class="btn-row">
+        <button class="btn" onclick="getNews()">Fetch news</button>
+        <label class="muted" style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="newsAuto" checked> Auto-refresh news every 5 min</label>
+      </div>
       <div id="newsOut" style="margin-top:12px;"></div>
     </div>
   </section>
@@ -370,7 +375,7 @@
   <section id="panel-watchlist" class="panel">
     <div class="card">
       <h2>Watchlist</h2>
-      <p class="muted">No dedicated backend for this section — it reuses <code>GET /market/quote</code> from section 11, with the same API key. Prices are only fetched when you click Refresh.</p>
+      <p class="muted">No dedicated backend for this section — it reuses <code>GET /market/quote</code> from section 11 (no API key needed). Prices refresh automatically every 30 s while this tab is open, and price alerts are checked on every refresh.</p>
       <div class="btn-row">
         <select id="wlSymbol">
           <option value="RELIANCE.BSE">Reliance Industries</option>
@@ -379,6 +384,7 @@
         </select>
         <button class="btn" onclick="addWatchlistSymbol()">Add to watchlist</button>
         <button class="btn secondary" onclick="refreshWatchlist()">Refresh all live prices</button>
+        <label class="muted" style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="wlAuto" checked> Auto-refresh every 30 s</label>
       </div>
       <div class="table-wrap"><table id="wlTable"></table></div>
     </div>
@@ -400,6 +406,16 @@
       <h2>API Key Directory</h2>
       <p class="muted">Pulled live from <code>GET /api-keys</code>.</p>
       <div id="keysOut"></div>
+    </div>
+  </section>
+
+  <!-- ============ 16 ABOUT ============ -->
+  <section id="panel-about" class="panel">
+    <div class="card">
+      <h2>About FinSuite</h2>
+      <p class="muted">Pulled live from <code>GET /about</code>.</p>
+      <div id="aboutOut">—</div>
+      <div class="meta" style="margin-top:12px;">Web developed by — <b>Purva Gajanan Kakade</b><br>Guidance: <b>Prof. Ashish Singh (SJMSOM, IIT Bombay)</b></div>
     </div>
   </section>
 
