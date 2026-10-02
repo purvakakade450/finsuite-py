@@ -275,8 +275,8 @@
       <h2>Quote &amp; Daily History</h2>
       <p class="muted">Search <b>any</b> listed company, ETF or index — NSE, BSE, US and more. No API key needed: live quotes and history come from Yahoo Finance (via <code>yfinance</code>).</p>
       <div class="row">
-        <div class="field symbol-search"><label>Company name or ticker</label>
-          <input id="marketSymbol" type="text" value="RELIANCE.NS" autocomplete="off" spellcheck="false" placeholder="e.g. Tata Steel, HDFC Bank, Eternal, AAPL, Nifty 50">
+        <div class="field symbol-search"><label>Company — choose from the list or type to search any listed company</label>
+          <div class="combo"><input id="marketSymbol" type="text" value="RELIANCE.NS" autocomplete="off" spellcheck="false" placeholder="Click to pick a popular stock, or type any company — e.g. Samsung, Tata Steel, AAPL"><button type="button" class="suggest-toggle" aria-label="Show popular stocks">▾</button></div>
           <div class="suggest" id="marketSuggest" hidden></div>
         </div>
         <div class="field" style="flex:0 0 140px;"><label>History period</label>
@@ -286,21 +286,6 @@
             <option value="5y">5 years</option><option value="max">Max</option>
           </select>
         </div>
-      </div>
-      <div class="chips" id="popularChips">
-        <span class="muted" style="margin:0;">Popular:</span>
-        <button class="chip" data-symbol="^NSEI">NIFTY 50</button>
-        <button class="chip" data-symbol="^BSESN">SENSEX</button>
-        <button class="chip" data-symbol="RELIANCE.NS">Reliance</button>
-        <button class="chip" data-symbol="TCS.NS">TCS</button>
-        <button class="chip" data-symbol="HDFCBANK.NS">HDFC Bank</button>
-        <button class="chip" data-symbol="INFY.NS">Infosys</button>
-        <button class="chip" data-symbol="ICICIBANK.NS">ICICI Bank</button>
-        <button class="chip" data-symbol="SBIN.NS">SBI</button>
-        <button class="chip" data-symbol="BHARTIARTL.NS">Bharti Airtel</button>
-        <button class="chip" data-symbol="ITC.NS">ITC</button>
-        <button class="chip" data-symbol="TATASTEEL.NS">Tata Steel</button>
-        <button class="chip" data-symbol="AAPL">Apple</button>
       </div>
       <div class="btn-row">
         <button class="btn" onclick="getQuote()">Get live quote</button>
@@ -399,7 +384,7 @@
       <p class="muted">No dedicated backend for this section — it reuses <code>GET /market/quote</code> from section 11 (no API key needed). Prices refresh automatically every 30 s while this tab is open, and price alerts are checked on every refresh.</p>
       <div class="btn-row">
         <div class="field symbol-search" style="margin:0;min-width:260px;">
-          <input id="wlSymbol" type="text" autocomplete="off" spellcheck="false" placeholder="Search any company or ticker…">
+          <div class="combo"><input id="wlSymbol" type="text" autocomplete="off" spellcheck="false" placeholder="Pick or search any company…"><button type="button" class="suggest-toggle" aria-label="Show popular stocks">▾</button></div>
           <div class="suggest" id="wlSuggest" hidden></div>
         </div>
         <button class="btn" onclick="addWatchlistSymbol()">Add to watchlist</button>

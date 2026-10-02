@@ -193,14 +193,43 @@ def get_quote(symbol: str) -> dict:
     return _cached(f"quote:{symbol.strip().upper()}", QUOTE_TTL, lambda: _fetch_quote(symbol))
 
 
+def _best_match(text: str) -> str | None:
+    try:
+        hits = search_symbols(text, limit=1)
+    except Exception:
+        return None
+    return hits[0]["symbol"] if hits else None
+
+
+def _resolve(symbol: str):
+    """Yield Yahoo symbols to try for user input, best guess first.
+
+    Company names ("samsung", "Tata Steel") go through Yahoo search first;
+    ticker-looking input ("TATASTEEL", "AAPL") is tried directly first, with
+    search as the last resort."""
+    text = symbol.strip()
+    is_name = " " in text or text != text.upper()
+    tried = set()
+    order = ([_best_match] if is_name else []) + [_candidates] + ([] if is_name else [_best_match])
+    for source in order:
+        found = source(text)
+        for yahoo in ([found] if isinstance(found, str) else found or []):
+            if yahoo and yahoo.upper() not in tried:
+                tried.add(yahoo.upper())
+                yield yahoo
+
+
+_NOT_FOUND = ("No market data found for '{}'. Pick a company from the dropdown, or try its "
+              "full name or ticker (e.g. TATASTEEL.NS for NSE, AAPL for US).")
+
+
 def _fetch_quote(symbol: str) -> dict:
-    for yahoo_symbol in _candidates(symbol):
+    for yahoo_symbol in _resolve(symbol):
         try:
             return _quote_for(symbol, yahoo_symbol)
         except ValueError:
             continue
-    raise ValueError(f"No quote data for '{symbol}'. Search by company name to find "
-                     f"the right ticker (e.g. TATASTEEL.NS for NSE, AAPL for US).")
+    raise ValueError(_NOT_FOUND.format(symbol))
 
 
 def _quote_for(symbol: str, yahoo_symbol: str) -> dict:
@@ -277,13 +306,12 @@ def get_daily_history(symbol: str, period: str = "3mo") -> list[dict]:
 
 
 def _fetch_history(symbol: str, period: str) -> list[dict]:
-    for yahoo_symbol in _candidates(symbol):
+    for yahoo_symbol in _resolve(symbol):
         hist = yf.Ticker(yahoo_symbol).history(period=period)
         if not hist.empty:
             break
     else:
-        raise ValueError(f"No history for '{symbol}'. Search by company name to find "
-                         f"the right ticker (e.g. TATASTEEL.NS for NSE, AAPL for US).")
+        raise ValueError(_NOT_FOUND.format(symbol))
 
     rows = []
     for idx, row in hist.iterrows():

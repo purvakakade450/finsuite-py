@@ -372,6 +372,12 @@ async function getQuote(){
     const symbol = document.getElementById("marketSymbol").value.trim();
     if(!symbol){ box.textContent = "Type a company name or ticker above."; return; }
     const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(symbol)}`);
+    const input = document.getElementById("marketSymbol");
+    if(document.activeElement !== input && input.value.trim() === symbol && q.yahooSymbol !== symbol){
+      input.value = q.yahooSymbol;                       // e.g. "samsung" -> "005930.KS"
+      const news = document.getElementById("newsSymbols");
+      if(news.value.trim() === symbol) news.value = q.yahooSymbol;
+    }
     const cur = currencySymbol(q.currency);
     box.innerHTML = `<b>${escapeHtml(q.name)}</b> <span class="muted">(${escapeHtml(q.yahooSymbol)})</span>: <b>${cur}${q.price}</b>` +
       (q.change!=null ? ` <span class="${q.change>=0?'badge-good':'badge-warn'}">${q.change>=0?"+":""}${q.change} (${q.changePercent}%)</span>` : "") +
@@ -591,41 +597,105 @@ setInterval(runAutoRefresh, 5000);
 document.addEventListener("visibilitychange", ()=>runAutoRefresh());
 
 /* ============================================================
-   SYMBOL SEARCH — type any company name or ticker, pick from
-   GET /market/search suggestions (or just press Enter on a ticker).
+   SYMBOL SEARCH DROPDOWN — click to browse popular stocks, or type
+   any company name / ticker to search every listed company via
+   GET /market/search. Enter picks the highlighted (or first) match.
    ============================================================ */
+const POPULAR = [
+  ["Indices", [
+    ["^NSEI","NIFTY 50","NSE"], ["^BSESN","S&P BSE SENSEX","BSE"], ["^NSEBANK","NIFTY Bank","NSE"], ["^CNXIT","NIFTY IT","NSE"],
+    ["^GSPC","S&P 500","US"], ["^IXIC","NASDAQ Composite","US"], ["^DJI","Dow Jones Industrial Average","US"],
+  ]],
+  ["India — NSE", [
+    ["RELIANCE.NS","Reliance Industries"], ["TCS.NS","Tata Consultancy Services"], ["HDFCBANK.NS","HDFC Bank"],
+    ["ICICIBANK.NS","ICICI Bank"], ["INFY.NS","Infosys"], ["BHARTIARTL.NS","Bharti Airtel"], ["SBIN.NS","State Bank of India"],
+    ["ITC.NS","ITC"], ["HINDUNILVR.NS","Hindustan Unilever"], ["LT.NS","Larsen & Toubro"], ["KOTAKBANK.NS","Kotak Mahindra Bank"],
+    ["AXISBANK.NS","Axis Bank"], ["BAJFINANCE.NS","Bajaj Finance"], ["BAJAJFINSV.NS","Bajaj Finserv"], ["HCLTECH.NS","HCL Technologies"],
+    ["WIPRO.NS","Wipro"], ["TECHM.NS","Tech Mahindra"], ["ASIANPAINT.NS","Asian Paints"], ["MARUTI.NS","Maruti Suzuki"],
+    ["TMPV.NS","Tata Motors Passenger Vehicles"], ["TMCV.NS","Tata Motors (Commercial Vehicles)"], ["M&M.NS","Mahindra & Mahindra"],
+    ["BAJAJ-AUTO.NS","Bajaj Auto"], ["HEROMOTOCO.NS","Hero MotoCorp"], ["EICHERMOT.NS","Eicher Motors"],
+    ["SUNPHARMA.NS","Sun Pharmaceutical"], ["DRREDDY.NS","Dr. Reddy's Laboratories"], ["CIPLA.NS","Cipla"], ["APOLLOHOSP.NS","Apollo Hospitals"],
+    ["TITAN.NS","Titan Company"], ["ULTRACEMCO.NS","UltraTech Cement"], ["GRASIM.NS","Grasim Industries"], ["NESTLEIND.NS","Nestlé India"],
+    ["BRITANNIA.NS","Britannia Industries"], ["TATACONSUM.NS","Tata Consumer Products"], ["POWERGRID.NS","Power Grid Corporation"],
+    ["NTPC.NS","NTPC"], ["ONGC.NS","Oil & Natural Gas Corporation"], ["COALINDIA.NS","Coal India"], ["TATASTEEL.NS","Tata Steel"],
+    ["JSWSTEEL.NS","JSW Steel"], ["HINDALCO.NS","Hindalco Industries"], ["ADANIENT.NS","Adani Enterprises"], ["ADANIPORTS.NS","Adani Ports & SEZ"],
+    ["INDUSINDBK.NS","IndusInd Bank"], ["SBILIFE.NS","SBI Life Insurance"], ["HDFCLIFE.NS","HDFC Life Insurance"], ["LICI.NS","Life Insurance Corporation of India"],
+    ["ETERNAL.NS","Eternal (Zomato)"], ["TRENT.NS","Trent"], ["DMART.NS","Avenue Supermarts (DMart)"], ["BEL.NS","Bharat Electronics"],
+    ["HAL.NS","Hindustan Aeronautics"], ["SHRIRAMFIN.NS","Shriram Finance"], ["JIOFIN.NS","Jio Financial Services"], ["IRCTC.NS","IRCTC"],
+    ["PIDILITIND.NS","Pidilite Industries"], ["PAYTM.NS","Paytm (One 97 Communications)"], ["NYKAA.NS","Nykaa (FSN E-Commerce)"],
+  ].map(([s,n])=>[s,n,"NSE"])],
+  ["US & Global", [
+    ["AAPL","Apple","NASDAQ"], ["MSFT","Microsoft","NASDAQ"], ["GOOGL","Alphabet (Google)","NASDAQ"], ["AMZN","Amazon","NASDAQ"],
+    ["NVDA","NVIDIA","NASDAQ"], ["META","Meta Platforms","NASDAQ"], ["TSLA","Tesla","NASDAQ"], ["NFLX","Netflix","NASDAQ"],
+    ["IBM","IBM","NYSE"], ["005930.KS","Samsung Electronics","Korea"], ["TM","Toyota Motor","NYSE"],
+  ]],
+].map(([group, rows])=>({ group, rows: rows.map(([symbol,name,exchange])=>({symbol,name,exchange,type:"EQUITY"})) }));
+
 function attachSymbolSearch(inputId, boxId, onPick){
   const input = document.getElementById(inputId), box = document.getElementById(boxId);
+  const toggle = input.parentElement.querySelector(".suggest-toggle");
   let timer = null, items = [], active = -1, seq = 0;
+  const norm = s=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
   const close = ()=>{ box.hidden = true; active = -1; };
-  const pick = (symbol)=>{ input.value = symbol; close(); onPick(symbol); };
-  const render = ()=>{
-    box.innerHTML = items.length
-      ? items.map((r,i)=>`<div class="suggest-item${i===active?" active":""}" data-i="${i}"><span class="sym">${escapeHtml(r.symbol)}</span><span class="nm">${escapeHtml(r.name)}</span><span class="exch">${escapeHtml(r.exchange)}${r.type!=="EQUITY"?" · "+escapeHtml(r.type):""}</span></div>`).join("")
-      : `<div class="suggest-empty">No matches — try the company's full name, or press Enter to use “${escapeHtml(input.value.trim())}” as a ticker.</div>`;
+  const pick = (symbol)=>{ input.value = symbol; close(); input.blur(); onPick(symbol); };
+
+  // sections: [{group, rows}] — flattened into `items` for keyboard navigation
+  const render = (sections, note="")=>{
+    items = sections.flatMap(s=>s.rows);
+    let i = 0;
+    box.innerHTML = sections.filter(s=>s.rows.length).map(s=>
+      `<div class="suggest-group">${escapeHtml(s.group)}</div>` +
+      s.rows.map(r=>{ const k = i++; return `<div class="suggest-item${k===active?" active":""}" data-i="${k}"><span class="sym">${escapeHtml(r.symbol)}</span><span class="nm">${escapeHtml(r.name)}</span><span class="exch">${escapeHtml(r.exchange)}${r.type && r.type!=="EQUITY"?" · "+escapeHtml(r.type):""}</span></div>`; }).join("")
+    ).join("") + (note ? `<div class="suggest-empty">${note}</div>` : "");
     box.hidden = false;
+    const el = box.querySelector(".suggest-item.active"); if(el) el.scrollIntoView({block:"nearest"});
   };
+  let sections = [];
+  const show = (secs, note)=>{ sections = secs; render(secs, note); };
+  const showPopular = ()=>{ active = -1; show(POPULAR); };
+  const localMatches = q=>{
+    const n = norm(q);
+    return POPULAR.flatMap(s=>s.rows).filter(r=>norm(r.name).includes(n) || norm(r.symbol).startsWith(n)).slice(0,6);
+  };
+
+  input.addEventListener("focus", ()=>{ input.select(); showPopular(); });
+  input.addEventListener("click", ()=>{ if(box.hidden) showPopular(); });
+  if(toggle) toggle.addEventListener("mousedown", e=>{ e.preventDefault(); if(box.hidden){ input.focus(); showPopular(); } else close(); });
+
   input.addEventListener("input", ()=>{
     clearTimeout(timer);
     const q = input.value.trim();
-    if(q.length < 2){ close(); return; }
+    active = -1;
+    if(!q){ showPopular(); return; }
+    const local = localMatches(q);
+    show([{group:"Popular", rows:local}], "Searching all listed companies…");
     timer = setTimeout(async ()=>{
       const my = ++seq;
       try{
         const r = await api("GET", `/market/search?q=${encodeURIComponent(q)}`);
         if(my !== seq || document.activeElement !== input) return;   // a newer keystroke won
-        items = r.results || []; active = -1; render();
-      }catch(e){ items = []; close(); }
+        const seen = new Set(local.map(x=>x.symbol));
+        const more = (r.results||[]).filter(x=>!seen.has(x.symbol));
+        show([{group:"Popular", rows:local}, {group:"All markets", rows:more}],
+             local.length || more.length ? "" : `No company found for “${escapeHtml(q)}”. Check the spelling, or press Enter to try it as a ticker.`);
+      }catch(e){ if(my === seq) show(sections.slice(0,1), "Search is unavailable right now — press Enter to try it as a ticker."); }
     }, 250);
   });
   input.addEventListener("keydown", e=>{
-    if(e.key === "ArrowDown" && items.length && !box.hidden){ active = (active+1) % items.length; render(); e.preventDefault(); }
-    else if(e.key === "ArrowUp" && items.length && !box.hidden){ active = (active-1+items.length) % items.length; render(); e.preventDefault(); }
-    else if(e.key === "Enter"){ e.preventDefault(); const v = input.value.trim(); if(active>=0 && !box.hidden) pick(items[active].symbol); else if(v) pick(v.toUpperCase()); }
+    const open = !box.hidden && items.length;
+    if(e.key === "ArrowDown"){ if(box.hidden) showPopular(); else if(open){ active = (active+1) % items.length; render(sections); } e.preventDefault(); }
+    else if(e.key === "ArrowUp" && open){ active = (active-1+items.length) % items.length; render(sections); e.preventDefault(); }
+    else if(e.key === "Enter"){
+      e.preventDefault();
+      const v = input.value.trim();
+      if(open && active >= 0) pick(items[active].symbol);
+      else if(open && v) pick(items[0].symbol);        // best match for what was typed
+      else if(v) pick(v);                              // backend resolves names/tickers itself
+    }
     else if(e.key === "Escape") close();
   });
-  box.addEventListener("mousedown", e=>{ const el = e.target.closest(".suggest-item"); if(el){ e.preventDefault(); pick(items[+el.dataset.i].symbol); } });
-  input.addEventListener("blur", ()=>setTimeout(close, 100));
+  box.addEventListener("mousedown", e=>{ e.preventDefault(); const el = e.target.closest(".suggest-item"); if(el) pick(items[+el.dataset.i].symbol); });
+  input.addEventListener("blur", ()=>setTimeout(close, 120));
 }
 
 function selectMarketSymbol(symbol){
@@ -636,5 +706,4 @@ function selectMarketSymbol(symbol){
 }
 attachSymbolSearch("marketSymbol", "marketSuggest", selectMarketSymbol);
 attachSymbolSearch("wlSymbol", "wlSuggest", ()=>addWatchlistSymbol());
-document.querySelectorAll("#popularChips .chip").forEach(c=>c.addEventListener("click", ()=>selectMarketSymbol(c.dataset.symbol)));
 document.getElementById("historyPeriod").addEventListener("change", getDailyHistory);
