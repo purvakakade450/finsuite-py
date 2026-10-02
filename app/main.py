@@ -31,6 +31,16 @@ app.add_middleware(
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
+@app.middleware("http")
+async def no_stale_frontend(request, call_next):
+    # Make the browser re-check the page/JS/CSS on every load (cheap 304 if
+    # unchanged), so code updates show up without a hard refresh.
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 def _wrap(fn, *args, **kwargs):
     try:
         return fn(*args, **kwargs)
