@@ -301,13 +301,21 @@ def get_daily_history(symbol: str, period: str = "3mo") -> list[dict]:
         [{"Date": "2026-06-01", "Open": 2850.0, "High": 2870.5,
           "Low": 2845.0, "Close": 2865.3, "Volume": 4821342}, ...]
     """
+    return get_history(symbol, period)["rows"]
+
+
+def get_history(symbol: str, period: str = "3mo") -> dict:
+    """Like get_daily_history, plus what the input resolved to:
+        {"yahooSymbol": "TATASTEEL.NS", "name": "Tata Steel Limited",
+         "currency": "INR", "rows": [...]}"""
     return _cached(f"history:{symbol.strip().upper()}:{period}", HISTORY_TTL,
                    lambda: _fetch_history(symbol, period))
 
 
-def _fetch_history(symbol: str, period: str) -> list[dict]:
+def _fetch_history(symbol: str, period: str) -> dict:
     for yahoo_symbol in _resolve(symbol):
-        hist = yf.Ticker(yahoo_symbol).history(period=period)
+        ticker = yf.Ticker(yahoo_symbol)
+        hist = ticker.history(period=period)
         if not hist.empty:
             break
     else:
@@ -323,7 +331,13 @@ def _fetch_history(symbol: str, period: str) -> list[dict]:
             "Close": round(float(row["Close"]), 2),
             "Volume": int(row["Volume"]),
         })
-    return rows
+    return {
+        "yahooSymbol": yahoo_symbol,
+        "name": company_name(yahoo_symbol) or yahoo_symbol,
+        "currency": (ticker.history_metadata or {}).get("currency")
+                    or ("INR" if yahoo_symbol.endswith((".NS", ".BO")) else "USD"),
+        "rows": rows,
+    }
 
 
 # --------------------------------------------------------------------------

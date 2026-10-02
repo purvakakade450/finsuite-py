@@ -11,7 +11,7 @@ if __package__ in (None, ""):
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 
 from app import calculators as calc
 from . import schemas as s
@@ -189,7 +189,7 @@ def market_quote(symbol: str = Query(..., min_length=1)):
 @app.get("/market/daily", tags=["11 Stock Market"])
 def market_daily(symbol: str = Query(..., min_length=1),
                  period: str = Query("3mo", pattern="^(1mo|3mo|6mo|1y|2y|5y|max)$")):
-    return {"symbol": symbol, "rows": _market(market.get_daily_history, symbol, period)}
+    return {"symbol": symbol, **_market(market.get_history, symbol, period)}
 
 
 @app.get("/market/news", tags=["11 Stock Market"])
@@ -293,7 +293,13 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 @app.get("/", tags=["Meta"])
 def root():
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+    # Stamp the JS/CSS URLs with their file-modified time so a browser can
+    # never pair a fresh page with a stale cached script or stylesheet.
+    html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    for name in ("app.js", "style.css"):
+        version = int((FRONTEND_DIR / name).stat().st_mtime)
+        html = html.replace(f"/static/{name}\"", f"/static/{name}?v={version}\"")
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 if __name__ == "__main__":

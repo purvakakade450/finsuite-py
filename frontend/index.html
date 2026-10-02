@@ -295,7 +295,16 @@
       <div class="result-box" id="marketStatus">—</div>
       <div class="muted" id="historyStatus" style="margin-top:12px;"></div>
       <div class="chart-box" id="historyChartBox" hidden><canvas id="historyChart"></canvas></div>
-      <div class="table-wrap"><table id="marketTable"></table></div>
+      <div class="table-wrap"><table id="marketTable" class="ohlc"></table></div>
+      <div class="btn-row"><button class="btn secondary" id="historyMore" onclick="toggleHistoryRows()" hidden></button></div>
+      <div class="meta history-legend" id="historyLegend" hidden>
+        <b>How to read this table:</b>
+        <b>Open</b> – first price of the day ·
+        <b>High</b> / <b>Low</b> – highest and lowest price during the day ·
+        <b>Close</b> – last price of the day (the official daily price) ·
+        <b>Change</b> – Close vs the previous day's Close (<span class="badge-good">▲ up</span> / <span class="badge-warn">▼ down</span>) ·
+        <b>Volume</b> – number of shares traded that day. Hover a column heading for details.
+      </div>
     </div>
     <div class="card">
       <h2>News</h2>

@@ -365,13 +365,18 @@ function timeAgo(iso){
   if(mins < 1440) return `${Math.round(mins/60)} h ago`;
   return new Date(iso).toLocaleDateString();
 }
+// Bumped per request: a slow reply for a previously selected stock must not
+// overwrite the one the user picked since.
+const REQ = { quote:0, history:0, news:0 };
 async function getQuote(){
+  const my = ++REQ.quote;   // ignore replies to older requests
   const box = document.getElementById("marketStatus");
   box.textContent = "Fetching live quote…";
   try{
     const symbol = document.getElementById("marketSymbol").value.trim();
     if(!symbol){ box.textContent = "Type a company name or ticker above."; return; }
     const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(symbol)}`);
+    if(my !== REQ.quote) return;
     const input = document.getElementById("marketSymbol");
     if(document.activeElement !== input && input.value.trim() === symbol && q.yahooSymbol !== symbol){
       input.value = q.yahooSymbol;                       // e.g. "samsung" -> "005930.KS"
@@ -384,36 +389,82 @@ async function getQuote(){
       (q.previousClose!=null ? `<br>Prev close ${cur}${q.previousClose}` : "") +
       (q.open!=null ? ` · Open ${cur}${q.open} · Day range ${cur}${q.dayLow} – ${cur}${q.dayHigh} · Volume ${q.volume.toLocaleString()}` : "") +
       (q.asOf ? `<div class="muted" style="margin-top:4px;">Last trade: ${new Date(q.asOf).toLocaleString()}</div>` : "");
-  }catch(e){ box.textContent = "Error: "+e.message; }
+  }catch(e){ if(my !== REQ.quote) return; box.textContent = "Error: "+e.message; }
 }
 async function getDailyHistory(){
+  const my = ++REQ.history;   // ignore replies to older requests
   const status = document.getElementById("historyStatus");
   status.textContent = "Fetching daily history…";
   try{
     const symbol = document.getElementById("marketSymbol").value.trim();
     const period = document.getElementById("historyPeriod").value;
     const raw = await api("GET", `/market/daily?symbol=${encodeURIComponent(symbol)}&period=${period}`);
+    if(my !== REQ.history) return;
     const rows = raw.rows || [];
     if(!rows.length){ status.textContent = "No history returned — check the symbol."; return; }
     const first = rows[0].Close, last = rows[rows.length-1].Close, pct = (last-first)/first*100;
-    status.innerHTML = `${escapeHtml(symbol)}: ${rows.length} trading days, ${rows[0].Date} → ${rows[rows.length-1].Date} · ` +
-      `<b class="${pct>=0?'badge-good':'badge-warn'}">${pct>=0?"+":""}${pct.toFixed(2)}%</b> over the period (table shows latest 30).`;
+    const ticker = raw.yahooSymbol || symbol;
+    status.innerHTML = `<b>${escapeHtml(raw.name||ticker)}</b> (${escapeHtml(ticker)}) · ${rows.length} trading days, ` +
+      `${fmtDate(rows[0].Date)} → ${fmtDate(rows[rows.length-1].Date)} · ` +
+      `<b class="${pct>=0?'badge-good':'badge-warn'}">${pct>=0?"+":""}${pct.toFixed(2)}%</b> over the period` +
+      (raw.currency ? ` · prices in ${escapeHtml(raw.currency)}` : "");
     document.getElementById("historyChartBox").hidden = false;
     lineChart("historyChart","history", rows.map(r=>r.Date), [
-      { label:`${symbol} close`, data:rows.map(r=>r.Close), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.10)", fill:true, tension:.15, pointRadius:0, borderWidth:2 },
+      { label:`${ticker} close`, data:rows.map(r=>r.Close), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.10)", fill:true, tension:.15, pointRadius:0, borderWidth:2 },
     ]);
-    renderTable("marketTable", rows.slice(-30).reverse(), ["Date","Open","High","Low","Close","Volume"], 30);
-  }catch(e){ status.textContent = "Error: "+e.message; }
+    HISTORY = { rows, currency: raw.currency, showAll: false };
+    renderHistoryTable();
+  }catch(e){ if(my !== REQ.history) return; status.textContent = "Error: "+e.message; }
 }
+
+/* Daily OHLCV table: newest first, prices in the stock's currency,
+   day-on-day change, readable volume, and a legend for each column. */
+let HISTORY = null;
+const HISTORY_COLS = [
+  ["Date",   "Trading day (exchange's local date)"],
+  ["Open",   "First traded price when the market opened that day"],
+  ["High",   "Highest price traded during the day"],
+  ["Low",    "Lowest price traded during the day"],
+  ["Close",  "Last traded price when the market closed — the day's official price"],
+  ["Change", "Close compared with the previous trading day's close"],
+  ["Volume", "Number of shares traded during the day"],
+];
+function fmtDate(iso){
+  return new Date(iso+"T00:00:00").toLocaleDateString("en-IN", {weekday:"short", day:"2-digit", month:"short", year:"numeric"});
+}
+function renderHistoryTable(){
+  const {rows, currency, showAll} = HISTORY;
+  const cur = currencySymbol(currency), locale = currency==="INR" ? "en-IN" : "en-US";
+  const money = v => v==null ? "—" : cur + v.toLocaleString(locale, {minimumFractionDigits:2, maximumFractionDigits:2});
+  const latest = rows.map((r,i)=>({...r, prev: i ? rows[i-1].Close : null})).reverse();
+  const shown = showAll ? latest : latest.slice(0, 30);
+  document.getElementById("marketTable").innerHTML =
+    `<tr>${HISTORY_COLS.map(([c,tip])=>`<th title="${tip}"${c!=="Date"?' class="num"':""}>${c}</th>`).join("")}</tr>` +
+    shown.map(r=>{
+      const ch = r.prev ? r.Close - r.prev : null, chPct = r.prev ? ch / r.prev * 100 : null;
+      const cls = ch==null ? "" : ch>=0 ? "badge-good" : "badge-warn";
+      return `<tr><td>${fmtDate(r.Date)}</td><td class="num">${money(r.Open)}</td><td class="num">${money(r.High)}</td>` +
+        `<td class="num">${money(r.Low)}</td><td class="num"><b>${money(r.Close)}</b></td>` +
+        `<td class="num ${cls}">${ch==null ? "—" : `${ch>=0?"▲ +":"▼ "}${ch.toFixed(2)} (${chPct>=0?"+":""}${chPct.toFixed(2)}%)`}</td>` +
+        `<td class="num">${r.Volume ? r.Volume.toLocaleString(locale) : "—"}</td></tr>`;
+    }).join("");
+  const more = document.getElementById("historyMore");
+  more.hidden = latest.length <= 30;
+  more.textContent = showAll ? "Show latest 30 days only" : `Show all ${latest.length} days`;
+  document.getElementById("historyLegend").hidden = false;
+}
+function toggleHistoryRows(){ if(HISTORY){ HISTORY.showAll = !HISTORY.showAll; renderHistoryTable(); } }
 async function getNews(){
+  const my = ++REQ.news;   // ignore replies to older requests
   const out = document.getElementById("newsOut");
   out.textContent = "Fetching news…";
   try{
     const symbols = document.getElementById("newsSymbols").value;
     const raw = await api("GET", `/market/news?symbols=${encodeURIComponent(symbols)}&limit=10`);
+    if(my !== REQ.news) return;
     const items = raw.data || [];
     out.innerHTML = items.length ? items.map(a=>`<div class="result-box"><a href="${escapeHtml(a.link)}" target="_blank" rel="noopener"><b>${escapeHtml(a.title)}</b></a><div class="muted" style="margin-top:4px;">${escapeHtml(a.source||"")}${a.published_at?" · "+timeAgo(a.published_at):""}</div></div>`).join("") : "No news in the last 7 days for that query.";
-  }catch(e){ out.textContent = "Error: "+e.message; }
+  }catch(e){ if(my !== REQ.news) return; out.textContent = "Error: "+e.message; }
 }
 
 /* ============================================================
