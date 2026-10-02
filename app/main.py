@@ -1,4 +1,13 @@
+import sys
 from pathlib import Path
+
+# Allow `python app/main.py` (e.g. VS Code's Run button) as well as
+# `uvicorn app.main:app`: put the project root on the path and treat this
+# file as part of the `app` package so the imports below resolve.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    __package__ = "app"
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -275,3 +284,12 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 @app.get("/", tags=["Meta"])
 def root():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+
+if __name__ == "__main__":
+    import os
+    import uvicorn
+
+    port = int(os.environ.get("PORT", 8000))
+    print(f"FinSuite running at http://127.0.0.1:{port}  (API docs: /docs) - press Ctrl+C to stop")
+    uvicorn.run(app, host="127.0.0.1", port=port)
