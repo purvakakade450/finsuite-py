@@ -1,84 +1,73 @@
-# Startup Idea Bank Chatbot
+# FinSuite
 
-A chat-style web app for browsing a 640-idea, 32-sector startup idea bank —
-built with a Python (Flask) backend and a plain HTML/CSS/JS frontend.
+An AI-assisted personal finance and live stock market analysis platform — a
+FastAPI backend with a plain HTML/CSS/JavaScript frontend. Built as an
+internship project ("AI in Finance") by **Purva Gajanan Kakade** under the
+guidance of **Prof. Ashish Singh (SJMSOM, IIT Bombay)**.
+
+Full project report: [docs/FinSuite_Project_Report.pdf](docs/FinSuite_Project_Report.pdf)
+(editable version: `docs/FinSuite_Project_Report.docx`).
+
+## Features
+
+16 tools in one console, each backed by a documented REST endpoint:
+
+| # | Module | # | Module |
+|---|---|---|---|
+| 01 | Ratio calculators (ROE, ROA, debt ratio, health) | 09 | Goal & retirement planner, emergency fund |
+| 02 | Personal finance report | 10 | Knowledge centre (glossary) |
+| 03 | Finance assistant (snapshot + term lookup) | 11 | **Live stock market** — any company, quotes, chart, OHLC history, news |
+| 04 | Loan insight generator | 12 | What-if growth, target / stop-loss planner |
+| 05 | Credit score & customer risk | 13 | SIP vs lump sum, capital gains tax (India), 52-week range |
+| 06 | Investment BUY / HOLD / AVOID | 14 | Live watchlist & price alerts |
+| 07 | Company performance score | 15 | API key directory (none needed) |
+| 08 | Multi-company portfolio screener | 16 | About |
+
+Live market data needs **no API key**: quotes, history and company search come
+from Yahoo Finance via `yfinance`, and news from Google News RSS.
+
+## Run it
+
+```bash
+python -m venv agentic_env
+agentic_env\Scripts\activate          # Windows  (source agentic_env/bin/activate on macOS/Linux)
+pip install -r requirements.txt
+python app/main.py                    # or: uvicorn app.main:app --reload
+```
+
+Open http://127.0.0.1:8000 for the app and http://127.0.0.1:8000/docs for the
+interactive API documentation. Set `PORT` to use a different port.
+
+Quick check of the market-data layer without the server:
+
+```bash
+python -m app.market TCS
+```
 
 ## Project structure
 
 ```
-backend/
-  app.py               Flask app: serves the frontend + a small JSON API
-  data_loader.py        Loads and cleans the .xlsx workbook into idea records
-  requirements.txt      Python dependencies
-
+app/
+  main.py          FastAPI app: routes, error mapping, serves the frontend
+  calculators.py   Pure financial formulas for the calculator modules
+  market.py        Live data: company search, symbol resolution, quotes,
+                   history, news, in-memory TTL cache
+  schemas.py       Pydantic request models
+  glossary.py      Knowledge-centre Q&A
+backend/services/
+  features.py      Data cleaning + technical features (MA7/MA30, returns,
+                   volatility, RSI)
+  ml_models.py     Linear Regression and Random Forest (scikit-learn)
+  simulate.py      Synthetic OHLCV generator for practice
 frontend/
-  index.html             Page shell
-  static/
-    css/style.css        All styling
-    js/app.js             Talks to the backend API, renders the chat UI
-
-data/
-  Startup_Idea_Bank_640_Unique.xlsx   Source workbook (32 sheets + Index)
+  index.html, app.js, style.css
+docs/
+  FinSuite_Project_Report.docx / .pdf
 ```
 
-## Setup (VS Code / terminal)
+## Notes
 
-1. Open this folder in VS Code.
-2. Create and activate a virtual environment:
-
-   ```bash
-   cd backend
-   python -m venv venv
-
-   # macOS / Linux
-   source venv/bin/activate
-
-   # Windows
-   venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Run the server:
-
-   ```bash
-   python app.py
-   ```
-
-5. Open **http://localhost:5000** in your browser.
-
-VS Code will pick up `backend/venv` as the interpreter automatically if you
-select it via *Python: Select Interpreter*; otherwise point it at
-`backend/venv/bin/python` (or `venv\Scripts\python.exe` on Windows).
-
-## How it works
-
-- On startup, `backend/app.py` calls `data_loader.load_idea_bank()`, which
-  reads every sheet in the workbook (except "Index"), normalizes the columns,
-  and splits each idea into a name/description.
-- The frontend never sees the spreadsheet directly — it talks to a small JSON
-  API:
-  - `GET /api/meta` — sector list with counts, difficulty levels, total count
-  - `GET /api/search?q=&domain=&difficulty=&limit=&offset=` — keyword search.
-    When `q` is given and something matches, the response also includes a
-    `"best"` object: the single top-fit idea plus a `confidence` percentage,
-    the `matched_terms`, and which field they landed in — this is what the
-    chat leads with instead of a plain list.
-  - `GET /api/random?domain=&difficulty=` — one random idea
-  - `GET /api/idea/<id>` — a single idea by id
-- `frontend/static/js/app.js` renders the sidebar filters and the chat thread.
-  On a text query it shows a short typing indicator, then leads with a
-  highlighted "best pick" card (confidence bar + matched keywords + a "top
-  match" stamp), with any other close matches offered underneath as
-  secondary options — rather than dumping a flat grid of results.
-
-## Updating the data
-
-Replace `data/Startup_Idea_Bank_640_Unique.xlsx` with a new workbook (same
-sheet layout: one sheet per sector, plus an "Index" sheet to ignore) and
-restart the server — no other changes needed.
-# finsuite-py
+- Yahoo Finance data via `yfinance` is unofficial and may be delayed; this is
+  an educational tool, not investment advice.
+- The ML pipeline in `backend/services` is used for offline experiments (see
+  Chapter 5 of the report); it is not exposed in the UI.

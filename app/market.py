@@ -450,7 +450,7 @@ def _fetch_news(symbols: str, limit: int) -> list[dict]:
     items.sort(key=lambda a: a["_ts"], reverse=True)
     seen, unique = set(), []
     for a in items:
-        key = _squash(a["title"])[:60]
+        key = _squash(a["title"])[:45]   # catches "… By Investing.com" re-posts
         if key in seen or a["link"] in seen:
             continue
         seen.update((key, a["link"]))
