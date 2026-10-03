@@ -7,6 +7,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 import math
+import re
 
 
 # ---------------------------------------------------------------------------
@@ -120,9 +121,11 @@ TERMS = {
 
 def chat_reply(question: str) -> str:
     lower = question.lower()
-    for term, definition in TERMS.items():
-        if term in lower:
-            return definition
+    # Longest term first, whole words only, so "debt-to-equity" doesn't match
+    # "equity" and "premium" doesn't match "emi".
+    for term in sorted(TERMS, key=len, reverse=True):
+        if re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", lower):
+            return TERMS[term]
     return "I don't have a definition for that yet — try asking about ROE, ROA, debt ratio, credit score, EMI, or similar finance terms."
 
 
@@ -453,6 +456,8 @@ def compare_sip_lump_sum(total: float, months: int, start_price: float, prices_b
         raise ValueError("total and months must be positive")
     if len(prices_by_month) < months:
         raise ValueError("not enough monthly prices for that many months")
+    if start_price <= 0 or last_price <= 0 or any(p <= 0 for p in prices_by_month[:months]):
+        raise ValueError("prices must be positive")
 
     lump_shares = total / start_price
     per_installment = total / months
@@ -496,6 +501,8 @@ def estimate_capital_gains_tax(buy_price: float, sell_price: float, qty: float,
 def check_52_week_range(current: float, high: float, low: float) -> dict:
     if high == low:
         raise ValueError("52-week high and low must differ")
+    if high <= 0 or low <= 0:
+        raise ValueError("52-week high and low must be positive")
     pct = ((current - low) / (high - low)) * 100
     from_high = ((current - high) / high) * 100
     from_low = ((current - low) / low) * 100
