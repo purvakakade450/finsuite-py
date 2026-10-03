@@ -64,7 +64,7 @@ class CreditScoreIn(BaseModel):
 
 
 class RiskIn(BaseModel):
-    score: float
+    score: float = Field(ge=300, le=900)
     income: Optional[float] = None
     emi: Optional[float] = None
     name: str = "This customer"

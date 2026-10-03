@@ -361,15 +361,21 @@ def calc_goal_plan(target: float, years: float, ret: float, inflation: float,
         raise ValueError("target and years must be positive")
 
     fv_goal = target * ((1 + inflation / 100) ** years)
-    fv_current = current * ((1 + ret / 100) ** years)
+    n_months = round(years * 12)
+    # Same monthly compounding as the SIP maths, so the schedule lands exactly on the goal.
+    fv_current = current * ((1 + ret / 12 / 100) ** n_months)
     remaining = max(fv_goal - fv_current, 0)
     sip = goal_monthly_sip(remaining, ret, years)
-    total_invested = current + sip * round(years * 12)
+    total_invested = current + sip * n_months
     gain = max(fv_goal - total_invested, 0)
 
+    # One point per whole year, plus the exact end of the plan for part-years (e.g. 2.5).
+    marks = [(y, y * 12) for y in range(int(n_months // 12) + 1)]
+    if n_months % 12:
+        marks.append((n_months / 12, n_months))
     schedule = [
-        {"year": y, "projected_corpus": round(goal_corpus_at_month(sip, current, ret, y * 12)), "target": round(fv_goal)}
-        for y in range(round(years) + 1)
+        {"year": y, "projected_corpus": round(goal_corpus_at_month(sip, current, ret, m)), "target": round(fv_goal)}
+        for y, m in marks
     ]
 
     parts = [f'To reach "{name}" in {years} year(s), accounting for {inflation}% annual inflation, '
@@ -414,6 +420,8 @@ def calc_emergency_fund(expenses: float, savings: float = 0) -> dict:
 def calc_what_if(amount: float, price_then: float, price_now: float, days_held: int) -> dict:
     if amount <= 0 or price_then <= 0:
         raise ValueError("amount and price_then must be positive")
+    if price_now < 0:
+        raise ValueError("price_now must not be negative")
     shares = amount / price_then
     value_now = shares * price_now
     gain = value_now - amount
@@ -426,6 +434,8 @@ def calc_what_if(amount: float, price_then: float, price_now: float, days_held: 
 def calc_target_plan(entry: float, qty: float, target_pct: float, stop_pct: float) -> dict:
     if entry <= 0 or qty <= 0:
         raise ValueError("entry and qty must be positive")
+    if target_pct < 0 or not 0 <= stop_pct <= 100:
+        raise ValueError("target must be 0% or more and stop-loss between 0% and 100%")
     target_price = entry * (1 + target_pct / 100)
     stop_price = entry * (1 - stop_pct / 100)
     gain_amt = (target_price - entry) * qty
@@ -508,6 +518,6 @@ def check_52_week_range(current: float, high: float, low: float) -> dict:
     from_low = ((current - low) / low) * 100
     return {
         "current": current, "high": high, "low": low,
-        "range_position_pct": max(2, min(100, pct)),
+        "range_position_pct": max(0, min(100, pct)),
         "from_low_pct": from_low, "from_high_pct": from_high,
     }

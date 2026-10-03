@@ -68,8 +68,9 @@ async function calcDebtRatio(){
     box.textContent = `Debt Ratio = ${r.debt_ratio.toFixed(2)}`; }catch(e){ box.textContent = "Error: "+e.message; }
 }
 async function calcHealth(){
-  const r = await api("POST","/ratios/health",{roe:+document.getElementById("hsRoe").value});
-  document.getElementById("hsResult").textContent = `Health: ${r.health}`;
+  const box = document.getElementById("hsResult");
+  try{ const r = await api("POST","/ratios/health",{roe:+document.getElementById("hsRoe").value});
+    box.textContent = `Health: ${r.health}`; }catch(e){ box.textContent = "Error: "+e.message; }
 }
 
 /* ============================================================
@@ -125,7 +126,7 @@ async function calcAssistant(){
       savings:+document.getElementById("asSavings").value, borrowed:+document.getElementById("asBorrowed").value,
       owned:+document.getElementById("asOwned").value,
     });
-    barChart("assistantChart","assistant", ["ROE %","ROA %","Borrowed/Owned","Savings Ratio %"], [r.roe, r.roa, r.borrowed_to_owned*100, r.savings_ratio]);
+    barChart("assistantChart","assistant", ["ROE %","ROA %","Borrowed/Owned %","Savings Ratio %"], [r.roe, r.roa, r.borrowed_to_owned*100, r.savings_ratio]);
     document.getElementById("assistantInsightText").textContent = r.insight;
     box.style.display = "block";
   }catch(e){ box.style.display="none"; alert(e.message); }
@@ -175,15 +176,17 @@ async function calcCreditScore(){
 }
 async function calcRisk(){
   const out = document.getElementById("riskResult"), box = document.getElementById("riskInsight");
-  const r = await api("POST","/risk",{
-    name:document.getElementById("riskName").value||"This customer",
-    income:+document.getElementById("riskIncome").value||null, emi:+document.getElementById("riskEmi").value||null,
-    score:+document.getElementById("riskScore").value,
-  });
-  out.className = `result-box ${r.band}`;
-  out.textContent = `${r.name}: ${r.level}`;
-  document.getElementById("riskInsightText").textContent = r.insight;
-  box.style.display = "block";
+  try{
+    const r = await api("POST","/risk",{
+      name:document.getElementById("riskName").value||"This customer",
+      income:+document.getElementById("riskIncome").value||null, emi:+document.getElementById("riskEmi").value||null,
+      score:+document.getElementById("riskScore").value,
+    });
+    out.className = `result-box ${r.band}`;
+    out.textContent = `${r.name}: ${r.level}`;
+    document.getElementById("riskInsightText").textContent = r.insight;
+    box.style.display = "block";
+  }catch(e){ out.className="result-box"; out.textContent = "Error: "+e.message; box.style.display="none"; }
 }
 
 /* ============================================================
@@ -499,7 +502,7 @@ async function calcTargetPlan(){
 async function calcSip(){
   const box = document.getElementById("sipResult");
   try{
-    const prices = document.getElementById("sipPrices").value.split(",").map(s=>+s.trim()).filter(n=>!isNaN(n));
+    const prices = document.getElementById("sipPrices").value.split(",").map(s=>s.trim()).filter(s=>s!=="").map(Number);
     const r = await api("POST","/tools/sip-vs-lumpsum",{
       total:+document.getElementById("sipTotal").value, months:+document.getElementById("sipMonths").value,
       start_price:+document.getElementById("sipStart").value, prices_by_month:prices, last_price:+document.getElementById("sipLast").value,
@@ -524,7 +527,7 @@ async function calcRange(){
     const r = await api("POST","/tools/52-week-range",{
       current:+document.getElementById("rangeCurrent").value, high:+document.getElementById("rangeHigh").value, low:+document.getElementById("rangeLow").value,
     });
-    box.innerHTML = `Position in range: <b>${r.range_position_pct.toFixed(1)}%</b><br>From 52w high: <b class="badge-warn">${r.from_high_pct.toFixed(2)}%</b><br>From 52w low: <b class="badge-good">+${r.from_low_pct.toFixed(2)}%</b>`;
+    box.innerHTML = `Position in range: <b>${r.range_position_pct.toFixed(1)}%</b><br>From 52w high: <b class="badge-warn">${r.from_high_pct.toFixed(2)}%</b><br>From 52w low: <b class="${r.from_low_pct>=0?'badge-good':'badge-warn'}">${r.from_low_pct>=0?"+":""}${r.from_low_pct.toFixed(2)}%</b>`;
   }catch(e){ box.textContent = "Error: "+e.message; }
 }
 
