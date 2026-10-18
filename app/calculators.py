@@ -378,12 +378,12 @@ def calc_goal_plan(target: float, years: float, ret: float, inflation: float,
         for y, m in marks
     ]
 
-    parts = [f'To reach "{name}" in {years} year(s), accounting for {inflation}% annual inflation, '
+    parts = [f'To reach "{name}" in {years:g} year(s), accounting for {inflation:g}% annual inflation, '
              f"you'll need roughly {fv_goal:,.0f} at that point in time."]
     if remaining <= 0:
         parts.append("Your existing savings, growing at the expected return, are already projected to cover this.")
     else:
-        parts.append(f"Investing {sip:,.0f} every month at an assumed {ret}% annual return gets you there.")
+        parts.append(f"Investing {sip:,.0f} every month at an assumed {ret:g}% annual return gets you there.")
         if income:
             pct_income = (sip / income) * 100
             if pct_income > 50:
