@@ -552,7 +552,7 @@ async function refreshWatchlist(){
   for(const w of WATCHLIST){
     try{
       const q = await api("GET", `/market/quote?symbol=${encodeURIComponent(w.symbol)}`);
-      if(q && q.price!=null) Object.assign(w, { name:q.name, price:q.price, change:q.change, changePercent:q.changePercent, day:q.asOf?new Date(q.asOf).toLocaleString():"" });
+      if(q && q.price!=null) Object.assign(w, { name:q.name, currency:q.currency, price:q.price, change:q.change, changePercent:q.changePercent, day:q.asOf?new Date(q.asOf).toLocaleString():"" });
       else w.price = "no data";
     }catch(e){ w.price = "Error"; }
   }
@@ -573,7 +573,7 @@ function removePriceAlert(i){ ALERTS.splice(i,1); renderAlerts(); }
 function renderAlerts(){
   const table = document.getElementById("alertTable");
   table.innerHTML = `<tr><th>Symbol</th><th>Condition</th><th>Status</th><th></th></tr>` +
-    ALERTS.map((a,i)=>`<tr><td>${a.symbol}</td><td>${a.type==="above"?"Rises above":"Falls below"} ₹${a.price}</td><td>${a.triggered?'<b class="badge-warn">Alert triggered</b>':"Watching"}</td><td><button class="btn secondary" onclick="removePriceAlert(${i})">Remove</button></td></tr>`).join("");
+    ALERTS.map((a,i)=>`<tr><td>${a.symbol}</td><td>${a.type==="above"?"Rises above":"Falls below"} ${currencySymbol((WATCHLIST.find(x=>x.symbol===a.symbol)||{}).currency || "INR")}${a.price}</td><td>${a.triggered?'<b class="badge-warn">Alert triggered</b>':"Watching"}</td><td><button class="btn secondary" onclick="removePriceAlert(${i})">Remove</button></td></tr>`).join("");
 }
 function checkAlerts(){
   ALERTS.forEach(a=>{

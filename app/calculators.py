@@ -136,9 +136,9 @@ def credit_insight(score: float) -> str:
     if score >= 800:
         return "Excellent credit profile."
     if score >= 750:
-        return "Good credit score."
+        return "Very good credit score."
     if score >= 650:
-        return "Moderate credit profile."
+        return "Good credit profile."
     return "Loan approval risk is high."
 
 
