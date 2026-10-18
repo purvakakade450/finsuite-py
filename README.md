@@ -10,7 +10,7 @@ Full project report: [docs/FinSuite_Project_Report.pdf](docs/FinSuite_Project_Re
 
 ## Features
 
-16 tools in one console, each backed by a documented REST endpoint:
+17 tools in one console, each backed by a documented REST endpoint:
 
 | # | Module | # | Module |
 |---|---|---|---|
@@ -22,6 +22,7 @@ Full project report: [docs/FinSuite_Project_Report.pdf](docs/FinSuite_Project_Re
 | 06 | Investment BUY / HOLD / AVOID | 14 | Live watchlist & price alerts |
 | 07 | Company performance score | 15 | API key directory (none needed) |
 | 08 | Multi-company portfolio screener | 16 | About |
+| 17 | **ML price prediction** — Linear Regression & Random Forest next-day close, checked against a naive baseline | | |
 
 Live market data needs **no API key**: quotes, history and company search come
 from Yahoo Finance via `yfinance`, and news from Google News RSS.
@@ -52,6 +53,7 @@ app/
   calculators.py   Pure financial formulas for the calculator modules
   market.py        Live data: company search, symbol resolution, quotes,
                    history, news, in-memory TTL cache
+  predict.py       ML next-day prediction pipeline (uses backend/services)
   schemas.py       Pydantic request models
   glossary.py      Knowledge-centre Q&A
 backend/services/
@@ -69,5 +71,6 @@ docs/
 
 - Yahoo Finance data via `yfinance` is unofficial and may be delayed; this is
   an educational tool, not investment advice.
-- The ML pipeline in `backend/services` is used for offline experiments (see
-  Chapter 5 of the report); it is not exposed in the UI.
+- The ML tab (`GET /ml/predict`) trains on the stock's own history and is shown
+  next to a naive "tomorrow = today" baseline; short-term prices are hard to
+  predict, so treat forecasts as educational, not as trading signals.

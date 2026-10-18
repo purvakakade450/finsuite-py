@@ -52,8 +52,10 @@ def train_random_forest(train_rows: list[dict], test_rows: list[dict],
         max_depth=max_depth,
         random_state=42,
         n_jobs=-1,
-    ).fit(X_train, y_train)
-    preds = model.predict(X_test)
+    ).fit(X_train, y_train - X_train[:, 0])
+    # Trees can't predict outside the prices seen in training, so learn the
+    # next-day CHANGE from today's close (column 0) and add it back.
+    preds = X_test[:, 0] + model.predict(X_test)
 
     mae = mean_absolute_error(y_test, preds)
     rmse = mean_squared_error(y_test, preds) ** 0.5
@@ -69,4 +71,18 @@ def train_random_forest(train_rows: list[dict], test_rows: list[dict],
         "actual": [round(float(a), 2) for a in y_test],
         "dates": [r["Date"] for r in test_rows],
         "n_estimators": n_estimators,
+    }
+
+def forecast_next_close(ml_rows: list[dict], latest_features: dict, n_estimators: int = 200, max_depth: int = 8) -> dict:
+    """Fits both models on ALL labelled rows and predicts the close after
+    `latest_features` (the most recent trading day, which has no next-day label yet)."""
+    X, y = _to_xy(ml_rows)
+    x_new = np.array([[latest_features[f] for f in FEATURES]], dtype=float)
+
+    scaler = StandardScaler().fit(X)
+    lin = LinearRegression().fit(scaler.transform(X), y)
+    rf = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=42, n_jobs=-1).fit(X, y - X[:, 0])
+    return {
+        "linear": round(float(lin.predict(scaler.transform(x_new))[0]), 2),
+        "random_forest": round(float(x_new[0, 0] + rf.predict(x_new)[0]), 2),
     }

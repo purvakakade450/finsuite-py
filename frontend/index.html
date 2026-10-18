@@ -32,6 +32,7 @@
   <button class="tab" data-tab="watchlist">14 Watchlist &amp; Alerts</button>
   <button class="tab" data-tab="keys">15 API Key Directory</button>
   <button class="tab" data-tab="about">16 About</button>
+<button class="tab" data-tab="predict">17 ML Prediction</button>
 </nav>
 
 <main>
@@ -422,6 +423,28 @@
     </div>
   </section>
 
+  <!-- ============ 17 ML PRICE PREDICTION ============ -->
+  <section id="panel-predict" class="panel">
+    <div class="card">
+      <h2>ML Next-Day Price Prediction</h2>
+      <p class="muted">Trains <b>Linear Regression</b> and <b>Random Forest</b> (scikit-learn) on the stock's own daily history — moving averages (7/30 day), daily return and volatility — then forecasts the next trading day's close. Models are tested on the most recent 20% of days they never saw, and compared with the naive guess "tomorrow = today". Data: Yahoo Finance, no API key.</p>
+      <div class="row">
+        <div class="field"><label>Company — open the list, or search any listed company</label>
+          <div class="picker" id="mlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="mlSymbol" value="RELIANCE.NS">
+        </div>
+        <div class="field" style="flex:0 0 160px;"><label>Training history</label>
+          <select id="mlPeriod"><option value="1y">1 year</option><option value="2y" selected>2 years</option><option value="5y">5 years</option></select>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn" id="mlRun" onclick="runPrediction()">Train &amp; predict</button></div>
+      <div class="result-box" id="mlStatus">—</div>
+      <div class="stat-strip" id="mlStats" style="display:none;"></div>
+      <div class="insight-box" id="mlVerdict" style="display:none;"><span class="lbl">How to read this</span><span id="mlVerdictText"></span></div>
+      <div class="chart-box" id="mlChartBox" hidden><canvas id="mlChart"></canvas></div>
+      <div class="table-wrap"><table id="mlTable"></table></div>
+      <div class="meta" id="mlNote" hidden style="margin-top:10px;"><b>MAE</b> – average price error · <b>RMSE</b> – like MAE but punishes big misses · <b>MAPE</b> – average error as % of price. Lower is better. Educational only — short-term prices are hard to predict and this is not investment advice.</div>
+    </div>
+  </section>
   <!-- ============ 16 ABOUT ============ -->
   <section id="panel-about" class="panel">
     <div class="card">

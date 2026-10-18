@@ -227,6 +227,19 @@ def tools_52_week_range(body: s.Range52WIn):
 
 
 # ---------------------------------------------------------------------------
+# 17 ML price prediction (next-day close, scikit-learn)
+# ---------------------------------------------------------------------------
+@app.get("/ml/predict", tags=["17 ML Price Prediction"])
+def ml_predict(symbol: str = Query(..., min_length=1),
+               period: str = Query("2y", pattern="^(1y|2y|5y)$")):
+    try:
+        from . import predict
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"ML libraries unavailable on this server: {e}")
+    return _market(predict.predict_next_close, symbol, period)
+
+
+# ---------------------------------------------------------------------------
 # 15 API key directory (mirrors the web app's reference page)
 # ---------------------------------------------------------------------------
 @app.get("/api-keys", tags=["15 API Key Directory"])
@@ -260,11 +273,11 @@ def about():
         "version": app.version,
         "sections": sections,
         "endpoint_count": sum(tag_counts.values()),
-        "tech_stack": ["FastAPI", "Uvicorn", "Pandas", "yfinance", "Chart.js"],
+        "tech_stack": ["FastAPI", "Uvicorn", "Pandas", "NumPy", "scikit-learn", "yfinance", "Chart.js"],
         "about_text": (
             "FinSuite is a full-stack finance web application covering personal finance ratios, "
             "AI-assisted analysis, loan and credit risk screening, portfolio and goal planning, "
-            "live stock market data, a watchlist with price alerts, and a built-in finance "
+            "live stock market data, a watchlist with price alerts, machine-learning next-day price forecasts, and a built-in finance "
             "glossary — all in one console. Every calculator and data lookup on this site is "
             "powered by a documented FastAPI REST endpoint (see /docs); this page is a thin "
             "client that calls those endpoints directly and renders the results."

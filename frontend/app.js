@@ -769,3 +769,53 @@ function selectMarketSymbol(symbol){
 attachSymbolPicker("marketPicker", "marketSymbol", selectMarketSymbol);
 attachSymbolPicker("wlPicker", "wlSymbol", symbol=>addWatchlistSymbol(symbol));
 document.getElementById("historyPeriod").addEventListener("change", getDailyHistory);
+
+/* ============================================================
+   17 ML PRICE PREDICTION -> GET /ml/predict
+   ============================================================ */
+let MLSEQ = 0;
+async function runPrediction(){
+  const my = ++MLSEQ;
+  const status = document.getElementById("mlStatus"), btn = document.getElementById("mlRun");
+  const symbol = document.getElementById("mlSymbol").value.trim();
+  if(!symbol){ status.textContent = "Choose a company above."; return; }
+  status.textContent = "Fetching history and training models… (can take up to a minute)";
+  btn.disabled = true;
+  ["mlStats","mlVerdict"].forEach(id=>document.getElementById(id).style.display="none");
+  try{
+    const d = await api("GET", `/ml/predict?symbol=${encodeURIComponent(symbol)}&period=${document.getElementById("mlPeriod").value}`);
+    if(my !== MLSEQ) return;
+    const cur = currencySymbol(d.currency), fmt = v => cur + v.toLocaleString(d.currency==="INR"?"en-IN":"en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+    const f = d.forecast, m = d.metrics, names = {linear:"Linear Regression", random_forest:"Random Forest"};
+    const arrow = p => `<span class="${p>=0?'badge-good':'badge-warn'}">${p>=0?"▲ +":"▼ "}${p.toFixed(2)}%</span>`;
+    status.innerHTML = `<b>${escapeHtml(d.name)}</b> <span class="muted">(${escapeHtml(d.yahooSymbol)})</span> · trained on ${d.data.train} days, tested on the latest ${d.data.test} days (${d.data.days} trading days downloaded)`;
+    const stats = document.getElementById("mlStats");
+    stats.style.display = "flex";
+    stats.innerHTML = `
+      <div class="stat">Last close (${fmtDate(f.last_date)})<b>${fmt(f.last_close)}</b></div>
+      <div class="stat">Linear Regression → next day<b>${fmt(f.linear)}</b>${arrow(f.linear_change_pct)}</div>
+      <div class="stat">Random Forest → next day<b>${fmt(f.random_forest)}</b>${arrow(f.random_forest_change_pct)}</div>`;
+    const order = [["naive","Naive: tomorrow = today"],["linear",names.linear],["random_forest",names.random_forest]];
+    document.getElementById("mlTable").innerHTML =
+      `<tr><th>Model</th><th class="num">MAE (${escapeHtml(d.currency||"")})</th><th class="num">RMSE</th><th class="num">MAPE %</th></tr>` +
+      order.map(([k,label])=>`<tr><td>${k===d.best_model?"<b>"+label+" ★</b>":label}</td><td class="num">${m[k].mae.toLocaleString()}</td><td class="num">${m[k].rmse.toLocaleString()}</td><td class="num">${m[k].mape.toFixed(2)}%</td></tr>`).join("");
+    const gain = ((m.naive.mae - m[d.best_model].mae) / m.naive.mae * 100);
+    document.getElementById("mlVerdictText").textContent = d.beats_baseline
+      ? `${names[d.best_model]} was the most accurate on unseen days, about ${gain.toFixed(1)}% closer than simply assuming tomorrow equals today.`
+      : `Neither model beat the naive "tomorrow = today" guess on unseen days (best: ${names[d.best_model]}, ${Math.abs(gain).toFixed(1)}% ${gain<0?"worse":"better"}). That is common — day-to-day prices are very hard to predict — so treat the forecast above as a rough guide, not a signal.`;
+    document.getElementById("mlVerdict").style.display = "block";
+    document.getElementById("mlChartBox").hidden = false;
+    lineChart("mlChart","ml", d.test.dates, [
+      { label:"Actual close", data:d.test.actual, borderColor:"#0E7C7B", borderWidth:2, pointRadius:0, tension:.1 },
+      { label:"Linear Regression", data:d.test.linear, borderColor:"#B9840E", borderWidth:1.5, pointRadius:0, tension:.1 },
+      { label:"Random Forest", data:d.test.random_forest, borderColor:"#7A4CC2", borderWidth:1.5, borderDash:[5,3], pointRadius:0, tension:.1 },
+    ]);
+    document.getElementById("mlNote").hidden = false;
+  }catch(e){
+    if(my !== MLSEQ) return;
+    status.textContent = "Error: " + e.message;
+    document.getElementById("mlChartBox").hidden = true; document.getElementById("mlNote").hidden = true;
+    document.getElementById("mlTable").innerHTML = "";
+  }finally{ if(my === MLSEQ) btn.disabled = false; }
+}
+attachSymbolPicker("mlPicker", "mlSymbol", ()=>runPrediction());
