@@ -250,7 +250,7 @@ def api_keys():
             "No external API keys are required. Live quotes and daily OHLCV history "
             "come from yfinance (public Yahoo Finance data, no signup), and news "
             "headlines come from Google News' public RSS feed. Both are free and "
-            "keyless — nothing to paste in here."
+            "keyless, so there is nothing to paste in here."
         ),
     }
 
@@ -275,21 +275,21 @@ def about():
         "endpoint_count": sum(tag_counts.values()),
         "tech_stack": ["FastAPI", "Uvicorn", "Pandas", "NumPy", "scikit-learn", "yfinance", "Chart.js"],
         "about_text": (
-            "FinSuite is a full-stack finance web application covering personal finance ratios, "
-            "AI-assisted analysis, loan and credit risk screening, portfolio and goal planning, "
-            "live stock market data, a watchlist with price alerts, machine-learning next-day price forecasts, and a built-in finance "
-            "glossary — all in one console. Every calculator and data lookup on this site is "
-            "powered by a documented FastAPI REST endpoint (see /docs); this page is a thin "
-            "client that calls those endpoints directly and renders the results."
+            "FinSuite is a complete finance web application covering personal finance ratios, "
+            "AI assisted analysis, loan and credit risk screening, portfolio and goal planning, "
+            "live stock market data, a watchlist with price alerts, machine learning price forecasts "
+            "for the next trading day, and a built in finance glossary, all in one console. "
+            "Every calculator and data lookup on this site is powered by a documented FastAPI service "
+            "(see /docs), and this page simply sends your inputs to it and shows the results."
         ),
         "why_it_matters": (
-            "Most people make financial decisions — should I buy this stock, can I afford this loan, "
-            "how much should I save each month — without the tools professionals use to answer them. "
-            "FinSuite closes that gap by putting real financial-ratio math, risk scoring, and "
-            "goal-based projections in one free, easy-to-use console, so a student, a first-time "
+            "Most people make financial decisions, such as whether to buy a stock, whether they can afford "
+            "a loan, or how much to save each month, without the tools professionals use to answer them. "
+            "FinSuite closes that gap by putting real financial ratio calculations, risk scoring, and "
+            "goal projections in one free and easy to use console. A student, a first time "
             "investor, or a small saver can run the same kind of analysis a bank or analyst would, "
             "understand exactly why a result came out the way it did (every tool explains its formula), "
-            "and make a more informed decision — instead of guessing or relying on someone else's tip."
+            "and make a more informed decision instead of guessing or relying on someone else's tip."
         ),
         "developed_by": "Purva Gajanan Kakade",
         "guidance": "Prof. Ashish Singh (SJMSOM, IIT Bombay)",
