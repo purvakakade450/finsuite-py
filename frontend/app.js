@@ -116,7 +116,7 @@ async function sendChat(){
   addMsg(r.answer, "bot");
 }
 document.getElementById("chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter") sendChat(); });
-addMsg("Ask me about any finance term — ROE, ROA, GDP, inflation, assets, liabilities, equity and more.", "bot");
+addMsg("Ask me about any finance term, such as ROE, ROA, EMI, SIP, inflation, assets, liabilities or equity.", "bot");
 
 async function calcAssistant(){
   const box = document.getElementById("assistantInsight");
@@ -343,17 +343,46 @@ async function calcEmergencyFund(){
    10 KNOWLEDGE CENTER -> GET /knowledge/glossary
    ============================================================ */
 (async function loadGlossary(){
+  const list = document.getElementById("kcList");
   try{
     const r = await api("GET","/knowledge/glossary");
-    const kcList = document.getElementById("kcList");
+    let group = null, groupEl = null;
     r.glossary.forEach(item=>{
+      if(item.group !== group){
+        group = item.group;
+        groupEl = document.createElement("div");
+        groupEl.className = "kc-group";
+        groupEl.innerHTML = `<h3 class="kc-title">${escapeHtml(group)}</h3>`;
+        list.appendChild(groupEl);
+      }
       const el = document.createElement("div");
       el.className = "acc-item";
-      el.innerHTML = `<button class="acc-q"><span>${item.q}</span><span class="chev">+</span></button><div class="acc-a"><p>${item.a}</p></div>`;
+      el.dataset.text = (item.q+" "+item.a+" "+(item.example||"")+" "+(item.also||[]).join(" ")).toLowerCase();
+      el.innerHTML = `<button class="acc-q"><span>${escapeHtml(item.q)}</span><span class="chev">+</span></button>` +
+        `<div class="acc-a"><p>${escapeHtml(item.a)}</p>` +
+        (item.example ? `<p><b>Example:</b> ${escapeHtml(item.example)}</p>` : "") +
+        (item.where ? `<p class="muted"><b>Where in FinSuite:</b> ${escapeHtml(item.where)}</p>` : "") + `</div>`;
       el.querySelector(".acc-q").addEventListener("click", ()=> el.classList.toggle("open"));
-      kcList.appendChild(el);
+      groupEl.appendChild(el);
     });
-  }catch(e){ document.getElementById("kcList").textContent = "Could not load glossary: "+e.message; }
+    const empty = document.createElement("div");
+    empty.className = "muted"; empty.hidden = true; empty.textContent = "No matching term. Try a different word.";
+    list.appendChild(empty);
+    document.getElementById("kcSearch").addEventListener("input", e=>{
+      const q = e.target.value.trim().toLowerCase();
+      let shown = 0;
+      list.querySelectorAll(".kc-group").forEach(g=>{
+        let any = false;
+        g.querySelectorAll(".acc-item").forEach(it=>{
+          const hit = !q || it.dataset.text.includes(q);
+          it.hidden = !hit; any = any || hit; if(hit) shown++;
+          if(q && hit) it.classList.add("open"); else if(!q) it.classList.remove("open");
+        });
+        g.hidden = !any;
+      });
+      empty.hidden = shown > 0;
+    });
+  }catch(e){ list.textContent = "Could not load the Knowledge Center: "+e.message; }
 })();
 
 /* ============================================================

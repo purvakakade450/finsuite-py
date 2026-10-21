@@ -95,7 +95,9 @@ tr:hover td{background:#FAFBFD;}
 .acc-q{width:100%;text-align:left;background:var(--light);border:none;padding:12px 14px;font-size:13.5px;font-weight:600;color:var(--navy);cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 .acc-a{max-height:0;overflow:hidden;transition:max-height .2s ease;padding:0 14px;}
 .acc-a p{margin:12px 0;font-size:13px;color:var(--text);line-height:1.5;}
-.acc-item.open .acc-a{max-height:300px;}
+.acc-item.open .acc-a{max-height:800px;}
+.kc-title{margin:18px 0 8px;font-size:14px;color:var(--brand);text-transform:uppercase;letter-spacing:.04em;}
+.acc-item[hidden],.kc-group[hidden]{display:none;}
 .acc-item.open .chev{transform:rotate(45deg);}
 .chev{transition:transform .2s;font-size:16px;color:var(--brand);}
 

@@ -119,14 +119,38 @@ TERMS = {
 }
 
 
+_TOO_GENERIC = {"open", "high", "low", "close", "good", "weak", "test data", "training"}
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def _chat_index() -> list[tuple[str, str]]:
+    """(search phrase, answer) pairs: the short TERMS first, then every Knowledge
+    Centre entry under its name and any bracketed alias, e.g. "ROE (Return on Equity)"."""
+    from .glossary import GLOSSARY
+    pairs = [(_norm(t), d) for t, d in TERMS.items()]
+    for g in GLOSSARY:
+        answer = g["a"] + (f" Example: {g['example']}" if g.get("example") else "")
+        m = re.match(r"^(.*?)\s*\((.*)\)\s*$", g["term"])
+        names = [m.group(1), m.group(2)] if m else [g["term"]]
+        for name in names + list(g.get("also", [])):
+            for alias in re.split(r",| and | or ", name):
+                key = _norm(alias)
+                if len(key) >= 3 and key not in _TOO_GENERIC:
+                    pairs.append((key, answer))
+    return pairs
+
+
 def chat_reply(question: str) -> str:
-    lower = question.lower()
-    # Longest term first, whole words only, so "debt-to-equity" doesn't match
-    # "equity" and "premium" doesn't match "emi".
-    for term in sorted(TERMS, key=len, reverse=True):
-        if re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", lower):
-            return TERMS[term]
-    return "I don't have a definition for that yet — try asking about ROE, ROA, debt ratio, credit score, EMI, or similar finance terms."
+    q = " " + _norm(question) + " "
+    # Longest phrase first (stable, so the short TERMS win ties) and whole words
+    # only, so "debt to equity" doesn't match "equity" and "premium" doesn't match "emi".
+    for key, answer in sorted(_chat_index(), key=lambda p: len(p[0]), reverse=True):
+        if f" {key} " in q:
+            return answer
+    return "I don't have a definition for that yet. Try asking about ROE, ROA, debt ratio, credit score, EMI, SIP, inflation or similar finance terms, or browse the Knowledge Center."
 
 
 # ---------------------------------------------------------------------------
