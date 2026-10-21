@@ -1,0 +1,18 @@
+[Unit]
+Description=FinSuite (FastAPI)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/finsuite
+ExecStart=/opt/finsuite/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+# yfinance writes a small cache; give it a writable home
+Environment=HOME=/var/lib/finsuite
+StateDirectory=finsuite
+
+[Install]
+WantedBy=multi-user.target
