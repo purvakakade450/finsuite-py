@@ -586,26 +586,6 @@ function checkAlerts(){
 refreshAlertSymbolSelect();
 
 /* ============================================================
-   15 API KEY DIRECTORY -> GET /api-keys
-   ============================================================ */
-(async function loadKeys(){
-  try{
-    const r = await api("GET","/api-keys");
-    if(!r.keys || !r.keys.length){
-      document.getElementById("keysOut").innerHTML = `<div class="result-box">${r.note || "No API keys required."}</div>`;
-      return;
-    }
-    document.getElementById("keysOut").innerHTML = r.keys.map(k=>`
-      <div class="key-card">
-        <h3>${k.name}</h3>
-        <div>${k.function}</div>
-        <div class="meta">Used in: ${k.used_in.join(", ")} · Free tier: ${k.free_tier}</div>
-        <div class="meta"><a href="${k.get_key_url}" target="_blank">Get a key →</a></div>
-      </div>`).join("");
-  }catch(e){ document.getElementById("keysOut").textContent = "Could not load: "+e.message; }
-})();
-
-/* ============================================================
    16 ABOUT -> GET /about
    ============================================================ */
 (async function loadAbout(){

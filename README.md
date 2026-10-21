@@ -20,7 +20,7 @@ Full project report: [docs/FinSuite_Project_Report.pdf](docs/FinSuite_Project_Re
 | 04 | Loan insight generator | 12 | What-if growth, target / stop-loss planner |
 | 05 | Credit score & customer risk | 13 | SIP vs lump sum, capital gains tax (India), 52-week range |
 | 06 | Investment BUY / HOLD / AVOID | 14 | Live watchlist & price alerts |
-| 07 | Company performance score | 15 | API key directory (none needed) |
+| 07 | Company performance score | 15 | Data sources (where the data comes from) |
 | 08 | Multi-company portfolio screener | 16 | About |
 | 17 | **ML price prediction** — Linear Regression & Random Forest next-day close, checked against a naive baseline | | |
 

@@ -239,22 +239,6 @@ def ml_predict(symbol: str = Query(..., min_length=1),
     return _market(predict.predict_next_close, symbol, period)
 
 
-# ---------------------------------------------------------------------------
-# 15 API key directory (mirrors the web app's reference page)
-# ---------------------------------------------------------------------------
-@app.get("/api-keys", tags=["15 API Key Directory"])
-def api_keys():
-    return {
-        "keys": [],
-        "note": (
-            "No external API keys are required. Live quotes and daily OHLCV history "
-            "come from yfinance (public Yahoo Finance data, no signup), and news "
-            "headlines come from Google News' public RSS feed. Both are free and "
-            "keyless, so there is nothing to paste in here."
-        ),
-    }
-
-
 @app.get("/api/status", tags=["Meta"])
 def api_status():
     return {"status": "ok", "docs": "/docs"}

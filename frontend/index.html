@@ -29,7 +29,7 @@
   <button class="tab" data-tab="planner">12 Growth &amp; Target</button>
   <button class="tab" data-tab="tax">13 Portfolio &amp; Tax</button>
   <button class="tab" data-tab="watchlist">14 Watchlist &amp; Alerts</button>
-  <button class="tab" data-tab="keys">15 API Key Directory</button>
+  <button class="tab" data-tab="sources">15 Data Sources</button>
   <button class="tab" data-tab="about">16 About</button>
 <button class="tab" data-tab="predict">17 ML Prediction</button>
 </nav>
@@ -413,12 +413,15 @@
     </div>
   </section>
 
-  <!-- ============ 15 API KEY DIRECTORY ============ -->
-  <section id="panel-keys" class="panel">
+  <!-- ============ 15 DATA SOURCES ============ -->
+  <section id="panel-sources" class="panel">
     <div class="card">
-      <h2>API Key Directory</h2>
-      <p class="muted">Pulled live from <code>GET /api-keys</code>.</p>
-      <div id="keysOut"></div>
+      <h2>Data Sources</h2>
+      <p class="muted">Where the information shown in FinSuite comes from.</p>
+      <div class="result-box"><b>Yahoo Finance</b><br>Live stock quotes, daily price history (open, high, low, close, volume) and company search for NSE, BSE, US and other markets.<br><span class="muted">Used in: Stock Market, Watchlist &amp; Alerts, ML Prediction.</span></div>
+      <div class="result-box"><b>Google News</b><br>Latest news headlines from the last 7 days for the selected company or the overall market.<br><span class="muted">Used in: Stock Market.</span></div>
+      <div class="result-box"><b>Your own inputs</b><br>All calculators and planners work only on the numbers you enter. No outside data is used.<br><span class="muted">Used in: Ratios, Finance Report, Assistant, Loans, Credit and Risk, Investment Call, Company Performance, Portfolio Dashboard, Goals, Growth and Target, Portfolio and Tax.</span></div>
+      <div class="meta" style="margin-top:10px;">Market prices can be delayed by a few minutes. FinSuite is an educational tool and not investment advice.</div>
     </div>
   </section>
 
