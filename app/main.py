@@ -278,8 +278,8 @@ def about():
             "AI assisted analysis, loan and credit risk screening, portfolio and goal planning, "
             "live stock market data, a watchlist with price alerts, machine learning price forecasts "
             "for the next trading day, and a built in finance glossary, all in one console. "
-            "Every calculator and data lookup on this site is powered by a documented FastAPI service "
-            "(see /docs), and this page simply sends your inputs to it and shows the results."
+            "Every calculator and data lookup on this site is powered by a documented backend service, "
+            "and this page simply sends your inputs to it and shows the results."
         ),
         "why_it_matters": (
             "Most people make financial decisions, such as whether to buy a stock, whether they can afford "
