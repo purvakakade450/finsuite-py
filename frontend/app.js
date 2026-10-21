@@ -619,8 +619,7 @@ refreshAlertSymbolSelect();
       </div>
       <div class="row" style="margin-top:12px;">
         <div class="field"><label>Version</label><div>${r.version}</div></div>
-      </div>
-      <div class="meta" style="margin-top:8px;">Tech stack: ${r.tech_stack.join(", ")}</div>`;
+      </div>`;
   }catch(e){ document.getElementById("aboutOut").textContent = "Could not load: "+e.message; }
 })();
 

@@ -273,7 +273,6 @@ def about():
         "version": app.version,
         "sections": sections,
         "endpoint_count": sum(tag_counts.values()),
-        "tech_stack": ["FastAPI", "Uvicorn", "Pandas", "NumPy", "scikit-learn", "yfinance", "Chart.js"],
         "about_text": (
             "FinSuite is a complete finance web application covering personal finance ratios, "
             "AI assisted analysis, loan and credit risk screening, portfolio and goal planning, "
@@ -292,7 +291,7 @@ def about():
             "and make a more informed decision instead of guessing or relying on someone else's tip."
         ),
         "developed_by": "Purva Gajanan Kakade",
-        "guidance": "Prof. Ashish Singh (SJMSOM, IIT Bombay)",
+        "guidance": "Prof. Ashish Singh, Professor, SJMSOM, IIT Bombay",
     }
 
 
