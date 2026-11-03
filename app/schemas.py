@@ -46,6 +46,16 @@ class ChatIn(BaseModel):
     question: str
 
 
+class ChatMessage(BaseModel):
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=20000)
+
+
+class AiChatIn(BaseModel):
+    messages: list[ChatMessage] = Field(min_length=1, max_length=60)
+    context: Optional[dict] = None
+
+
 # 04/05 Loans & credit risk
 class LoanRow(BaseModel):
     customer_name: Optional[str] = None

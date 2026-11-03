@@ -188,24 +188,115 @@ async function calcReport(){
 /* ============================================================
    03 AI ASSISTANT -> POST /assistant/chat, POST /assistant/snapshot
    ============================================================ */
-function addMsg(text, who){
-  const log = document.getElementById("chatLog");
+/* AI chat -> POST /assistant/ai-chat (streams newline-delimited JSON events).
+   The conversation is kept in this browser and sent back with each question. */
+const CHAT = { history: LS.get("fs-chat", []), busy: false, ctrl: null };
+const CHAT_SUGGESTIONS = [
+  "Is TCS overbought right now? Check the RSI and news.",
+  "Old vs new tax regime on an ₹18 lakh salary with ₹1.5 lakh in 80C?",
+  "EMI on a ₹30 lakh home loan at 8.5% for 20 years, and what if I prepay ₹2 lakh after a year?",
+  "How is my saved portfolio doing today?",
+  "What would a ₹5,000 monthly SIP in Parag Parikh Flexi Cap have become over 3 years?",
+  "I'm 28, spend ₹45,000 a month and invest ₹25,000. When can I retire?",
+];
+function renderMarkdown(text){
+  if(window.marked && window.DOMPurify){
+    const html = DOMPurify.sanitize(marked.parse(text, {breaks:true, gfm:true}));
+    return html.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+  }
+  return escapeHtml(text).replace(/\n/g, "<br>");
+}
+function chatBubble(role, html){
   const div = document.createElement("div");
-  div.className = `msg ${who}`;
-  div.textContent = text;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
+  div.className = `msg ${role === "user" ? "user" : "bot"}`;
+  div.innerHTML = html;
+  document.getElementById("chatLog").appendChild(div);
+  return div;
 }
-async function sendChat(){
+function scrollChat(){ const log = document.getElementById("chatLog"); log.scrollTop = log.scrollHeight; }
+function renderChat(){
+  const log = document.getElementById("chatLog");
+  log.innerHTML = "";
+  if(!CHAT.history.length){
+    chatBubble("assistant", renderMarkdown("Hello! I'm your FinSuite finance assistant. Ask me about stocks, mutual funds, tax, loans, budgeting, retirement or any finance term, and I'll work it out with live data where I can."));
+  }
+  CHAT.history.forEach(m=> chatBubble(m.role, m.role === "user" ? escapeHtml(m.content).replace(/\n/g,"<br>") : renderMarkdown(m.content)));
+  document.getElementById("chatSuggest").innerHTML = CHAT.history.length ? "" :
+    CHAT_SUGGESTIONS.map((q,i)=>`<button type="button" class="chip" onclick="sendChat(CHAT_SUGGESTIONS[${i}])">${escapeHtml(q)}</button>`).join("");
+  scrollChat();
+}
+function saveChat(){ CHAT.history = CHAT.history.slice(-40); LS.set("fs-chat", CHAT.history); }
+function newChat(){ if(CHAT.ctrl) CHAT.ctrl.abort(); CHAT.history = []; saveChat(); renderChat(); document.getElementById("chatInput").focus(); }
+function setChatBusy(busy){
+  CHAT.busy = busy;
+  const b = document.getElementById("chatSend");
+  b.textContent = busy ? "Stop" : "Send";
+  b.classList.toggle("secondary", busy);
+}
+async function sendChat(preset){
+  if(CHAT.busy){ if(CHAT.ctrl) CHAT.ctrl.abort(); return; }
   const input = document.getElementById("chatInput");
-  const q = input.value.trim();
+  const q = (preset || input.value).trim();
   if(!q) return;
-  addMsg(q, "user"); input.value = "";
-  const r = await api("POST","/assistant/chat",{question:q});
-  addMsg(r.answer, "bot");
+  input.value = ""; input.style.height = "";
+  CHAT.history.push({role:"user", content:q});
+  saveChat(); renderChat();
+  const bubble = chatBubble("assistant", `<span class="typing"><i></i><i></i><i></i></span>`);
+  const status = document.createElement("div"); status.className = "ai-status";
+  const body = document.createElement("div");
+  bubble.innerHTML = ""; bubble.append(status, body);
+  status.innerHTML = `<span class="typing"><i></i><i></i><i></i></span> Thinking…`;
+  scrollChat();
+  let answer = "", notice = "", pending = false;
+  const paint = ()=>{ pending = false; body.innerHTML = renderMarkdown(answer) + (notice ? `<p class="meta">${escapeHtml(notice)}</p>` : ""); scrollChat(); };
+  const schedule = ()=>{ if(!pending){ pending = true; requestAnimationFrame(paint); } };
+  setChatBusy(true);
+  CHAT.ctrl = new AbortController();
+  try{
+    const res = await fetch("/assistant/ai-chat", {
+      method:"POST", headers:{"Content-Type":"application/json"}, signal: CHAT.ctrl.signal,
+      body: JSON.stringify({ messages: CHAT.history.map(m=>({role:m.role, content:m.content})),
+        context: { watchlist: WATCHLIST.map(w=>w.symbol), portfolio: HOLDINGS, tab: document.getElementById("navCurrent").textContent } }),
+    });
+    if(!res.ok){ const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(typeof e.detail === "string" ? e.detail : "Request failed"); }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    for(;;){
+      const {value, done} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      let nl;
+      while((nl = buf.indexOf("\n")) >= 0){
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if(!line) continue;
+        const ev = JSON.parse(line);
+        if(ev.type === "text"){ answer += ev.text; status.innerHTML = ""; schedule(); }
+        else if(ev.type === "tool"){ status.innerHTML = `<span class="typing"><i></i><i></i><i></i></span> ${escapeHtml(ev.label)}…`; scrollChat(); }
+        else if(ev.type === "notice"){ notice = ev.message; schedule(); }
+        else if(ev.type === "error"){ answer += (answer ? "\n\n" : "") + "⚠ " + ev.message; schedule(); }
+      }
+    }
+  }catch(e){
+    answer += (answer ? "\n\n" : "") + (e.name === "AbortError" ? "_(Stopped.)_" : "⚠ " + e.message);
+  }finally{
+    status.remove(); paint(); setChatBusy(false); CHAT.ctrl = null;
+    answer = answer.trim();
+    if(answer) CHAT.history.push({role:"assistant", content:answer});
+    saveChat();
+  }
 }
-document.getElementById("chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter") sendChat(); });
-addMsg("Ask me about any finance term, such as ROE, ROA, EMI, SIP, inflation, assets, liabilities or equity.", "bot");
+(function initChat(){
+  const input = document.getElementById("chatInput");
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendChat(); } });
+  input.addEventListener("input", ()=>{ input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; });
+  fetch("/assistant/ai-status").then(r=>r.json()).then(r=>{
+    const el = document.getElementById("aiMode");
+    el.textContent = r.enabled ? "AI mode on" : "Basic mode";
+    el.classList.toggle("on", r.enabled);
+    el.title = r.enabled ? "Answers come from an AI model using FinSuite's live data and calculators."
+                         : "No AI key is set on this server, so answers come from the Knowledge Center only.";
+  }).catch(()=>{});
+})();
 
 async function calcAssistant(){
   const box = document.getElementById("assistantInsight");
@@ -1761,6 +1852,7 @@ function onTabShown(name){
   const d = new Date(); d.setFullYear(d.getFullYear() - 3);
   document.getElementById("mfStart").value = d.toISOString().slice(0,10);
   renderBudgetItems(); renderHoldings(); renderWatchlist(); renderAlerts(); renderAccount();
+  renderChat();
   const first = location.hash.slice(1) || LS.get("fs-tab") || "report";
   showTab(document.getElementById("panel-"+first) ? first : "report", {noHash:!location.hash, keepScroll:true});
   window.addEventListener("hashchange", ()=>{ const t = location.hash.slice(1); if(t && document.getElementById("panel-"+t)) showTab(t, {noHash:true}); });

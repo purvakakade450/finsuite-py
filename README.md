@@ -77,6 +77,8 @@ python -m app.market TCS
 
 | Variable | Purpose |
 |---|---|
+| `ANTHROPIC_API_KEY` | Turns on the AI Assistant (Claude with FinSuite's calculators and live data as tools); without it the chat answers from the Knowledge Center |
+| `FINSUITE_AI_MODEL` | Model for the AI Assistant (default `claude-opus-5-5`) |
 | `FINSUITE_DB` | SQLite file for accounts and saved data (default `data/finsuite.db`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Email delivery for price alerts |
 | `ALERT_INTERVAL` | Seconds between background alert checks (default 300) |
@@ -98,6 +100,7 @@ app/
   market.py        Live data: company search, symbol resolution, quotes,
                    history, news, in-memory TTL cache
   predict.py       ML next-day prediction pipeline (uses backend/services)
+  ai_assistant.py  AI chat: Claude with FinSuite functions as tools, streamed
   planning.py      Income tax, loan EMI, 50/30/20 budget, retirement / FIRE
   analysis.py      Chart indicators, two-stock comparison, headline sentiment
   mf.py            Mutual fund NAVs (AMFI) and SIP returns with XIRR

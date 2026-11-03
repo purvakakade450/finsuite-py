@@ -29,12 +29,12 @@ _load_env_file(Path(__file__).resolve().parent.parent / ".env")
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 from app import calculators as calc
 from . import schemas as s
 from . import market
-from . import analysis, alerts, mf, planning, store, tracker
+from . import ai_assistant, analysis, alerts, mf, planning, store, tracker
 from .glossary import GLOSSARY
 
 
@@ -117,6 +117,22 @@ def assistant_snapshot(body: s.AssistantIn):
 @app.post("/assistant/chat", tags=["02 AI Finance Assistant"])
 def assistant_chat(body: s.ChatIn):
     return {"answer": calc.chat_reply(body.question)}
+
+
+@app.get("/assistant/ai-status", tags=["02 AI Finance Assistant"])
+def assistant_ai_status():
+    return {"enabled": ai_assistant.enabled(), "model": ai_assistant.MODEL if ai_assistant.enabled() else None}
+
+
+@app.post("/assistant/ai-chat", tags=["02 AI Finance Assistant"])
+def assistant_ai_chat(body: s.AiChatIn):
+    """Conversational AI assistant that can use FinSuite's calculators and live data.
+    Streams newline-delimited JSON events (see app/ai_assistant.py)."""
+    msgs = [m.model_dump() for m in body.messages]
+    if msgs[0]["role"] != "user" or msgs[-1]["role"] != "user":
+        raise HTTPException(status_code=422, detail="The conversation must start and end with a user message.")
+    return StreamingResponse(ai_assistant.chat_stream(msgs, body.context), media_type="application/x-ndjson",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 # ---------------------------------------------------------------------------
 # 17 Loan insight generator

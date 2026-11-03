@@ -6,3 +6,4 @@ scikit-learn>=1.4
 requests>=2.31
 pydantic>=2.6
 yfinance>=0.2.40
+anthropic>=2.4
