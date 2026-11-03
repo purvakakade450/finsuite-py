@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FinSuite — Python API</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230E7C7B%27/%3E%3Cpath d=%27M7 23l6-7 5 4 7-10%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
-<meta name="theme-color" content="#13224A">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem("fs-theme");if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 <link rel="stylesheet" href="/static/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -13,11 +15,11 @@
 <body>
 
 <header class="topbar">
-  <button class="top-btn nav-toggle" id="navToggle" aria-expanded="false" aria-controls="tabs">☰ <span id="navCurrent">01 Ratios</span></button>
-  <div class="brand">FinSuite</div>
+  <button class="top-btn nav-toggle" id="navToggle" aria-expanded="false" aria-controls="tabs"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> <span id="navCurrent">01 Ratios</span></button>
+  <div class="brand"><svg class="logo" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0E6E6D"/><path d="M7 22l6-6 4 3 8-9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="10" r="2.2" fill="#F2B544"/></svg><span class="brand-name">Fin<b>Suite</b></span><span class="brand-tag">Finance workbench</span></div>
   <div class="top-actions">
-    <button class="top-btn icon-btn" id="themeToggle" title="Switch dark / light mode" aria-label="Switch dark or light mode">🌙</button>
-    <button class="top-btn" id="accountBtn" onclick="openAccount()">👤 <span class="lbl" id="accountLabel">Log in</span></button>
+    <button class="top-btn icon-btn" id="themeToggle" title="Switch dark / light mode" aria-label="Switch dark or light mode"></button>
+    <button class="top-btn" id="accountBtn" onclick="openAccount()"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> <span class="lbl" id="accountLabel">Log in</span></button>
   </div>
 </header>
 
@@ -120,7 +122,7 @@
       </div>
       <button class="btn" onclick="calcReport()">Generate report</button>
       <div id="reportOut" style="margin-top:14px;"></div>
-      <div class="export-row" id="export-report" hidden><button class="btn secondary sm" onclick="doExport('report','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('report','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-report" hidden><button class="btn secondary sm" onclick="doExport('report','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('report','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
     </div>
   </section>
 
@@ -169,7 +171,7 @@
         <button class="btn" onclick="screenLoans()">Screen all</button>
       </div>
       <div class="table-wrap"><table id="loanTable"></table></div>
-      <div class="export-row" id="export-loans" hidden><button class="btn secondary sm" onclick="doExport('loans','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('loans','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-loans" hidden><button class="btn secondary sm" onclick="doExport('loans','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('loans','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
     </div>
   </section>
 
@@ -281,7 +283,7 @@
       <div class="stat-strip" id="goalStats" style="display:none;"></div>
       <div class="chart-box" id="goalChartWrap" style="display:none;"><canvas id="goalChart"></canvas></div>
       <div class="insight-box" id="goalInsight" style="display:none;"><span class="lbl">AI insight</span><span id="goalInsightText"></span></div>
-      <div class="export-row" id="export-goals" hidden><button class="btn secondary sm" onclick="doExport('goals','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('goals','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-goals" hidden><button class="btn secondary sm" onclick="doExport('goals','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('goals','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
       <p class="muted" style="margin-top:12px;">Planning for retirement? The <button class="btn link" onclick="showTab('fire')">Retirement &amp; FIRE planner</button> also covers the years after you stop working.</p>
     </div>
     <div class="card">
@@ -316,7 +318,7 @@
       <p class="muted">Search <b>any</b> listed company, ETF or index — NSE, BSE, US and more. No API key needed: live quotes and history come from Yahoo Finance (via <code>yfinance</code>).</p>
       <div class="row">
         <div class="field"><label>Company — open the list, or search any listed company</label>
-          <div class="picker" id="marketPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="marketSymbol" value="RELIANCE.NS">
+          <div class="picker" id="marketPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="marketSymbol" value="RELIANCE.NS">
         </div>
         <div class="field" style="flex:0 0 140px;"><label>History period</label>
           <select id="historyPeriod">
@@ -441,7 +443,7 @@
       <p class="muted">Prices come from <code>GET /market/quote</code> (no API key needed) and refresh every 30 s while this tab is open. Your watchlist is saved on this device, and in your account when you are logged in, so it is still here after a reload.</p>
       <div class="btn-row">
         <div class="field" style="margin:0;min-width:300px;">
-          <div class="picker" id="wlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Choose a company to add…</span><span class="picker-sym"></span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="wlSymbol" value="">
+          <div class="picker" id="wlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Choose a company to add…</span><span class="picker-sym"></span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="wlSymbol" value="">
         </div>
         <button class="btn" onclick="addWatchlistSymbol()">Add to watchlist</button>
         <button class="btn secondary" onclick="refreshWatchlist()">Refresh all live prices</button>
@@ -457,7 +459,7 @@
         <div class="field"><label>Target price (in the stock's currency)</label><input id="alertPrice" type="number" value="2900"></div>
       </div>
       <div class="btn-row"><button class="btn" onclick="addPriceAlert()">Add alert</button>
-        <button class="btn secondary" id="notifyBtn" onclick="enableNotifications()">🔔 Enable desktop notifications</button></div>
+        <button class="btn secondary" id="notifyBtn" onclick="enableNotifications()"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21h4"/></svg> Enable desktop notifications</button></div>
       <div class="insight-box" id="alertMode"></div>
       <div class="table-wrap"><table id="alertTable"></table></div>
     </div>
@@ -486,7 +488,7 @@
       <p class="muted">Trains <b>Linear Regression</b> and <b>Random Forest</b> (scikit-learn) on the stock's own daily history — moving averages (7/30 day), daily return and volatility — then forecasts the next trading day's close. Models are tested on the most recent 20% of days they never saw, and compared with the naive guess "tomorrow = today"<span class="info" data-term="Naive baseline" tabindex="0" role="button" aria-label="Explain Naive baseline"></span>. Data: Yahoo Finance, no API key.</p>
       <div class="row">
         <div class="field"><label>Company — open the list, or search any listed company</label>
-          <div class="picker" id="mlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="mlSymbol" value="RELIANCE.NS">
+          <div class="picker" id="mlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="mlSymbol" value="RELIANCE.NS">
         </div>
         <div class="field" style="flex:0 0 160px;"><label>Training history</label>
           <select id="mlPeriod"><option value="1y">1 year</option><option value="2y" selected>2 years</option><option value="5y">5 years</option></select>
@@ -525,7 +527,7 @@
       </div>
       <button class="btn" onclick="calcIncomeTax()">Compare regimes</button>
       <div id="itOut"></div>
-      <div class="export-row" id="export-incometax" hidden><button class="btn secondary sm" onclick="doExport('incometax','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('incometax','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-incometax" hidden><button class="btn secondary sm" onclick="doExport('incometax','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('incometax','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
     </div>
   </section>
 
@@ -556,7 +558,7 @@
           <select id="emiPlan" onchange="renderEmiTable()"><option value="pre">With prepayment</option><option value="base">Without prepayment</option></select></div>
         <div class="table-wrap tall"><table id="emiTable"></table></div>
       </div>
-      <div class="export-row" id="export-emi" hidden><button class="btn secondary sm" onclick="doExport('emi','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('emi','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-emi" hidden><button class="btn secondary sm" onclick="doExport('emi','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('emi','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
     </div>
   </section>
 
@@ -581,7 +583,7 @@
         </div>
         <div class="insight-box"><span class="lbl">Tips</span><div id="budTips"></div></div>
       </div>
-      <div class="export-row" id="export-budget" hidden><button class="btn secondary sm" onclick="doExport('budget','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('budget','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-budget" hidden><button class="btn secondary sm" onclick="doExport('budget','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('budget','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
     </div>
   </section>
 
@@ -612,7 +614,7 @@
       <div class="stat-strip" id="mfSipStats" hidden></div>
       <div class="chart-box" id="mfSipChartBox" hidden><canvas id="mfSipChart"></canvas></div>
       <div class="insight-box" id="mfSipInsight" hidden><span class="lbl">Insight</span><span id="mfSipInsightText"></span></div>
-      <div class="export-row" id="export-mf" hidden><button class="btn secondary sm" onclick="doExport('mf','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('mf','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-mf" hidden><button class="btn secondary sm" onclick="doExport('mf','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('mf','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
       <p class="meta" style="margin-top:10px;">Past returns do not guarantee future returns. Direct and regular plans of the same fund have different NAVs<span class="info" data-term="Direct plan vs regular plan" tabindex="0" role="button" aria-label="Explain Direct plan vs regular plan"></span>.</p>
     </div>
   </section>
@@ -624,7 +626,7 @@
       <p class="muted">Enter what you own. FinSuite values it at live prices and shows your profit or loss<span class="info" data-term="Unrealised gain" tabindex="0" role="button" aria-label="Explain Unrealised gain"></span>. Foreign stocks are converted to rupees at the live exchange rate. Holdings are saved on this device and in your account.</p>
       <div class="row">
         <div class="field" style="flex:2;min-width:240px;"><label>Stock</label>
-          <div class="picker" id="pfPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Choose a company…</span><span class="picker-sym"></span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="pfSymbol" value="">
+          <div class="picker" id="pfPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Choose a company…</span><span class="picker-sym"></span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="pfSymbol" value="">
         </div>
         <div class="field"><label>Quantity</label><input id="pfQty" type="number" value="10"></div>
         <div class="field"><label>Average buy price (stock's currency)</label><input id="pfAvg" type="number" value="3000"></div>
@@ -643,7 +645,7 @@
         <div class="chart-box round"><canvas id="pfBar"></canvas></div>
       </div>
       <div class="insight-box" id="pfInsight" hidden><span class="lbl">Insight<span class="info" data-term="Asset allocation" tabindex="0" role="button" aria-label="Explain Asset allocation"></span></span><span id="pfInsightText"></span></div>
-      <div class="export-row" id="export-tracker" hidden><button class="btn secondary sm" onclick="doExport('tracker','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('tracker','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-tracker" hidden><button class="btn secondary sm" onclick="doExport('tracker','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('tracker','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
     </div>
   </section>
 
@@ -673,7 +675,7 @@
       <div class="stat-strip" id="fiStats" hidden></div>
       <div class="chart-box" id="fiChartBox" hidden><canvas id="fiChart"></canvas></div>
       <div class="insight-box" id="fiInsight" hidden><span class="lbl">Insight</span><span id="fiInsightText"></span></div>
-      <div class="export-row" id="export-fire" hidden><button class="btn secondary sm" onclick="doExport('fire','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('fire','xlsx')">⬇ Download Excel</button></div>
+      <div class="export-row" id="export-fire" hidden><button class="btn secondary sm" onclick="doExport('fire','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('fire','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
     </div>
   </section>
 
@@ -697,10 +699,10 @@
       <p class="muted">Both prices are rebased to 100 on the first day so you can see which grew more, even across currencies.</p>
       <div class="row">
         <div class="field" style="min-width:220px;"><label>First stock</label>
-          <div class="picker" id="cmpPickerA"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Tata Consultancy Services</span><span class="picker-sym">TCS.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="cmpA" value="TCS.NS">
+          <div class="picker" id="cmpPickerA"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Tata Consultancy Services</span><span class="picker-sym">TCS.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="cmpA" value="TCS.NS">
         </div>
         <div class="field" style="min-width:220px;"><label>Second stock</label>
-          <div class="picker" id="cmpPickerB"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Infosys</span><span class="picker-sym">INFY.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="cmpB" value="INFY.NS">
+          <div class="picker" id="cmpPickerB"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Infosys</span><span class="picker-sym">INFY.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="cmpB" value="INFY.NS">
         </div>
         <div class="field" style="flex:0 0 140px;"><label>Period</label>
           <select id="cmpPeriod"><option value="1mo">1 month</option><option value="3mo">3 months</option><option value="6mo">6 months</option><option value="1y" selected>1 year</option><option value="2y">2 years</option><option value="5y">5 years</option></select>

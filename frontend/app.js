@@ -119,13 +119,12 @@ document.getElementById("navToggle").addEventListener("click", ()=>{
 /* ---------------- dark mode ---------------- */
 function currentTheme(){
   const set = document.documentElement.dataset.theme;
-  if(set) return set;
-  return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return set || "light";   // light unless the user picks dark
 }
 function paintThemeButton(){
   const dark = currentTheme()==="dark";
   const b = document.getElementById("themeToggle");
-  b.textContent = dark ? "☀️" : "🌙";
+  b.innerHTML = dark ? '<svg class="ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>' : '<svg class="ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
   b.title = dark ? "Switch to light mode" : "Switch to dark mode";
   if(window.Chart){ Chart.defaults.color = themeColors().muted; applyChartTheme(); }
 }
@@ -135,7 +134,6 @@ document.getElementById("themeToggle").addEventListener("click", ()=>{
   try{ localStorage.setItem("fs-theme", next); }catch(e){}
   paintThemeButton();
 });
-if(window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", paintThemeButton);
 paintThemeButton();
 
 /* ============================================================
@@ -750,7 +748,7 @@ function renderAlertMode(){
   }
   const nb = document.getElementById("notifyBtn");
   if(!("Notification" in window)) nb.hidden = true;
-  else if(Notification.permission === "granted"){ nb.textContent = "🔔 Desktop notifications on"; nb.disabled = true; }
+  else if(Notification.permission === "granted"){ nb.textContent = "Desktop notifications on"; nb.disabled = true; }
 }
 function enableNotifications(){
   if(!("Notification" in window)) return;
@@ -759,7 +757,7 @@ function enableNotifications(){
 function notifyAlert(a){
   const word = a.type==="above" ? "rose above" : "fell below";
   const msg = `${a.symbol} ${word} ${a.price} (now ${a.triggered_price}).`;
-  toast("🔔 Price alert: " + msg, "warn");
+  toast("Price alert: " + msg, "warn");
   try{ if("Notification" in window && Notification.permission === "granted") new Notification("FinSuite price alert", { body: msg }); }catch(e){}
 }
 // Replace the alert list with the server's copy; announce fired alerts not seen yet.
