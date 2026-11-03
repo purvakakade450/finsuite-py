@@ -322,6 +322,8 @@ def _fetch_history(symbol: str, period: str) -> dict:
         raise ValueError(_NOT_FOUND.format(symbol))
 
     rows = []
+    # Yahoo sometimes returns a half-filled row (NaN prices) for the current session.
+    hist = hist.dropna(subset=["Open", "High", "Low", "Close"]).fillna({"Volume": 0})
     for idx, row in hist.iterrows():
         rows.append({
             "Date": idx.strftime("%Y-%m-%d"),
@@ -457,6 +459,32 @@ def _fetch_news(symbols: str, limit: int) -> list[dict]:
         del a["_ts"]
         unique.append(a)
     return unique[:limit]
+
+
+# --------------------------------------------------------------------------
+# 4) CURRENCY CONVERSION  (Yahoo Finance FX pairs such as "USDINR=X")
+# --------------------------------------------------------------------------
+CURRENCIES = ["INR", "USD", "EUR", "GBP", "JPY", "AED", "SGD", "AUD", "CAD", "CHF", "CNY", "HKD", "KRW", "SAR"]
+
+
+def get_fx_rate(base: str, quote: str) -> dict:
+    """Live rate for 1 unit of `base` in `quote`, e.g. ("USD", "INR")."""
+    base, quote = base.strip().upper(), quote.strip().upper()
+    if base == quote:
+        return {"pair": f"{base}{quote}", "rate": 1.0, "asOf": datetime.now(timezone.utc).isoformat()}
+    q = get_quote(f"{base}{quote}=X")
+    return {"pair": f"{base}{quote}", "rate": q["price"], "change": q["change"],
+            "changePercent": q["changePercent"], "asOf": q["asOf"]}
+
+
+def convert_currency(amount: float, base: str, quote: str, period: str = "3mo") -> dict:
+    fx = get_fx_rate(base, quote)
+    out = {"amount": amount, "from": base.upper(), "to": quote.upper(), **fx,
+           "converted": round(amount * fx["rate"], 4), "inverse": round(1 / fx["rate"], 6) if fx["rate"] else None}
+    if base.upper() != quote.upper():
+        rows = get_history(f"{base.upper()}{quote.upper()}=X", period)["rows"]
+        out["history"] = [{"Date": r["Date"], "Close": r["Close"]} for r in rows]
+    return out
 
 
 # --------------------------------------------------------------------------

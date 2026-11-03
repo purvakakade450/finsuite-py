@@ -10,22 +10,38 @@ Full project report: [docs/FinSuite_Project_Report.pdf](docs/FinSuite_Project_Re
 
 ## Features
 
-17 tools in one console, each backed by a documented REST endpoint:
+24 tools in one console, grouped into four menus (Personal finance, Markets &
+investing, Business & credit, Learn & info), each backed by a documented REST endpoint:
 
 | # | Module | # | Module |
 |---|---|---|---|
-| 01 | Ratio calculators (ROE, ROA, debt ratio, health) | 09 | Goal & retirement planner, emergency fund |
-| 02 | Personal finance report | 10 | Knowledge centre (glossary) |
-| 03 | Finance assistant (snapshot + term lookup) | 11 | **Live stock market** — any company, quotes, chart, OHLC history, news |
-| 04 | Loan insight generator | 12 | What-if growth, target / stop-loss planner |
-| 05 | Credit score & customer risk | 13 | SIP vs lump sum, capital gains tax (India), 52-week range |
-| 06 | Investment BUY / HOLD / AVOID | 14 | Live watchlist & price alerts |
-| 07 | Company performance score | 15 | Data sources (where the data comes from) |
-| 08 | Multi-company portfolio screener | 16 | About |
-| 17 | **ML price prediction** — Linear Regression & Random Forest next-day close, checked against a naive baseline | | |
+| 01 | Ratio calculators (ROE, ROA, debt ratio, health) | 13 | SIP vs lump sum, capital gains tax (India), 52-week range |
+| 02 | Personal finance report (PDF / Excel download) | 14 | Watchlist & price alerts: saved, background checks, email |
+| 03 | Finance assistant (snapshot + term lookup) | 15 | Data sources |
+| 04 | Loan insight generator (PDF / Excel download) | 16 | About |
+| 05 | Credit score & customer risk | 17 | **ML price prediction**, with news mood next to the forecast |
+| 06 | Investment BUY / HOLD / AVOID | 18 | Income tax: old vs new regime (FY 2025-26) |
+| 07 | Company performance score | 19 | Loan EMI, repayment table, prepayment savings |
+| 08 | Multi-company portfolio screener | 20 | Budget planner (50/30/20 rule) |
+| 09 | Goal & retirement planner, emergency fund | 21 | Mutual fund search, NAV chart, SIP returns (XIRR) |
+| 10 | Knowledge centre (95 plain-language entries) | 22 | Portfolio tracker at live prices (P&L in INR) |
+| 11 | **Live stock market**: quotes, chart with SMA/EMA/Bollinger/RSI, OHLC history, news with sentiment | 23 | Retirement & FIRE planner |
+| | | 24 | Currency converter and two-stock comparison |
 
-Live market data needs **no API key**: quotes, history and company search come
-from Yahoo Finance via `yfinance`, and news from Google News RSS.
+Across the app: dark mode, a phone-friendly menu, ⓘ icons that open the
+Knowledge Centre explanation of a term, and PDF / Excel downloads for the
+finance report, goal plan, loan table, income tax, EMI schedule, budget,
+portfolio, retirement plan and SIP results.
+
+**Accounts (optional).** Creating an account saves the watchlist, portfolio and
+price alerts on the server (SQLite, passwords stored as salted PBKDF2 hashes).
+Without an account they are kept in the browser. For logged-in users a
+background worker checks alerts every 5 minutes and emails them if SMTP is
+configured (see `deploy/HOSTINGER.md`).
+
+Live data needs **no API key**: quotes, history, exchange rates and company
+search come from Yahoo Finance via `yfinance`, news from Google News RSS, and
+mutual fund NAVs from AMFI (history via the free mfapi.in mirror).
 
 ## Run it
 
@@ -45,6 +61,22 @@ Quick check of the market-data layer without the server:
 python -m app.market TCS
 ```
 
+### Settings (environment variables, all optional)
+
+| Variable | Purpose |
+|---|---|
+| `FINSUITE_DB` | SQLite file for accounts and saved data (default `data/finsuite.db`) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Email delivery for price alerts |
+| `ALERT_INTERVAL` | Seconds between background alert checks (default 300) |
+| `FINSUITE_ALERT_WORKER=0` | Turn the background worker off |
+| `CRON_SECRET` | Enables `POST /alerts/run-check` for hosts without a background worker |
+
+On Vercel the project folder is read-only and `/tmp` is wiped, so accounts there
+are temporary (the app says so in the login box) and the background worker does
+not run. For permanent accounts and background alerts, use the VPS setup in
+`deploy/HOSTINGER.md`, or point `FINSUITE_DB` at persistent storage and call
+`/alerts/run-check` from a cron job.
+
 ## Project structure
 
 ```
@@ -54,6 +86,12 @@ app/
   market.py        Live data: company search, symbol resolution, quotes,
                    history, news, in-memory TTL cache
   predict.py       ML next-day prediction pipeline (uses backend/services)
+  planning.py      Income tax, loan EMI, 50/30/20 budget, retirement / FIRE
+  analysis.py      Chart indicators, two-stock comparison, headline sentiment
+  mf.py            Mutual fund NAVs (AMFI) and SIP returns with XIRR
+  tracker.py       Portfolio valuation at live prices, converted to INR
+  store.py         Accounts, saved data and alerts (SQLite)
+  alerts.py        Background price-alert worker and email
   schemas.py       Pydantic request models
   glossary.py      Knowledge-centre Q&A
 backend/services/

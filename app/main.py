@@ -8,7 +8,10 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     __package__ = "app"
 
-from fastapi import FastAPI, HTTPException, Query
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -16,12 +19,23 @@ from fastapi.responses import HTMLResponse
 from app import calculators as calc
 from . import schemas as s
 from . import market
+from . import analysis, alerts, mf, planning, store, tracker
 from .glossary import GLOSSARY
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    stop = alerts.start_worker()   # background price-alert checks (not on Vercel)
+    yield
+    if stop:
+        stop.set()
+
 
 app = FastAPI(
     title="FinSuite API",
     description="Python port of the FinSuite finance-suite calculators.",
-    version="1.0.0",
+    version="2.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -190,7 +204,15 @@ def market_daily(symbol: str = Query(..., min_length=1),
 @app.get("/market/news", tags=["11 Stock Market"])
 def market_news(symbols: str = Query("", description="Tickers or search text; empty = general market news"),
                 limit: int = Query(10, ge=1, le=50)):
-    return {"query": symbols, "data": _market(market.get_news, symbols, limit)}
+    """Headlines, each marked positive / neutral / negative, plus an overall mood."""
+    return {"query": symbols, **_market(analysis.news_with_sentiment, symbols, limit)}
+
+
+@app.get("/market/indicators", tags=["11 Stock Market"])
+def market_indicators(symbol: str = Query(..., min_length=1),
+                      period: str = Query("6mo", pattern="^(1mo|3mo|6mo|1y|2y|5y|max)$")):
+    """20/50-day moving averages, 20-day EMA, Bollinger bands (20, 2) and 14-day RSI."""
+    return _market(analysis.get_indicators, symbol, period)
 
 
 # ---------------------------------------------------------------------------
@@ -239,9 +261,197 @@ def ml_predict(symbol: str = Query(..., min_length=1),
     return _market(predict.predict_next_close, symbol, period)
 
 
+# ---------------------------------------------------------------------------
+# 18 Income tax: old vs new regime
+# ---------------------------------------------------------------------------
+@app.post("/tax/income", tags=["18 Income Tax"])
+def tax_income(body: s.IncomeTaxIn):
+    return _wrap(planning.calc_income_tax, **body.model_dump())
+
+
+# ---------------------------------------------------------------------------
+# 19 Loan EMI calculator
+# ---------------------------------------------------------------------------
+@app.post("/loans/emi", tags=["19 Loan EMI"])
+def loans_emi(body: s.LoanEmiIn):
+    return _wrap(planning.calc_loan_emi, **body.model_dump())
+
+
+# ---------------------------------------------------------------------------
+# 20 Budget planner (50/30/20)
+# ---------------------------------------------------------------------------
+@app.post("/budget", tags=["20 Budget Planner"])
+def budget(body: s.BudgetIn):
+    return _wrap(planning.calc_budget, body.income, [i.model_dump() for i in body.items])
+
+
+# ---------------------------------------------------------------------------
+# 21 Mutual funds & SIP tracker (AMFI NAV data, no API key)
+# ---------------------------------------------------------------------------
+@app.get("/mf/search", tags=["21 Mutual Funds"])
+def mf_search(q: str = Query(..., min_length=2), limit: int = Query(15, ge=1, le=50)):
+    return {"query": q, "results": _market(mf.search_funds, q, limit)}
+
+
+@app.get("/mf/nav", tags=["21 Mutual Funds"])
+def mf_nav(code: int, years: int = Query(5, ge=0, le=40)):
+    return _market(mf.fund_nav_chart, code, years)
+
+
+@app.post("/mf/sip", tags=["21 Mutual Funds"])
+def mf_sip(body: s.MfSipIn):
+    try:
+        return mf.sip_returns(body.code, body.monthly, body.start, body.end)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Upstream data source failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# 22 Portfolio tracker (live prices)
+# ---------------------------------------------------------------------------
+@app.post("/tracker/value", tags=["22 Portfolio Tracker"])
+def tracker_value(body: s.TrackerIn):
+    return _wrap(tracker.value_holdings, [h.model_dump() for h in body.holdings])
+
+
+# ---------------------------------------------------------------------------
+# 23 Retirement & FIRE
+# ---------------------------------------------------------------------------
+@app.post("/goals/fire", tags=["23 Retirement & FIRE"])
+def goals_fire(body: s.FireIn):
+    return _wrap(planning.calc_fire, **body.model_dump())
+
+
+# ---------------------------------------------------------------------------
+# 24 Currency converter & stock comparison
+# ---------------------------------------------------------------------------
+@app.get("/market/currencies", tags=["24 Currency & Compare"])
+def market_currencies():
+    return {"currencies": market.CURRENCIES}
+
+
+@app.get("/market/fx", tags=["24 Currency & Compare"])
+def market_fx(base: str = Query("USD", pattern="^[A-Za-z]{3}$"), quote: str = Query("INR", pattern="^[A-Za-z]{3}$"),
+              amount: float = 1, period: str = Query("3mo", pattern="^(1mo|3mo|6mo|1y|5y)$")):
+    return _market(market.convert_currency, amount, base, quote, period)
+
+
+@app.get("/market/compare", tags=["24 Currency & Compare"])
+def market_compare(a: str = Query(..., min_length=1), b: str = Query(..., min_length=1),
+                   period: str = Query("1y", pattern="^(1mo|3mo|6mo|1y|2y|5y)$")):
+    return _market(analysis.compare_stocks, a, b, period)
+
+
+# ---------------------------------------------------------------------------
+# 25 Accounts, saved data and background price alerts
+# ---------------------------------------------------------------------------
+def _token(authorization: str | None) -> str:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Please log in.")
+    return authorization[7:].strip()
+
+
+def current_user(authorization: str | None = Header(None)) -> dict:
+    user = store.user_for_token(_token(authorization))
+    if not user:
+        raise HTTPException(status_code=401, detail="Your session has expired. Please log in again.")
+    return user
+
+
+def _auth(fn, *args):
+    try:
+        return fn(*args)
+    except store.AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/auth/register", tags=["25 Account"])
+def auth_register(body: s.RegisterIn):
+    return _auth(store.register, body.email, body.password, body.name)
+
+
+@app.post("/auth/login", tags=["25 Account"])
+def auth_login(body: s.LoginIn):
+    return _auth(store.login, body.email, body.password)
+
+
+@app.post("/auth/logout", tags=["25 Account"])
+def auth_logout(authorization: str | None = Header(None)):
+    store.logout(_token(authorization))
+    return {"ok": True}
+
+
+@app.get("/auth/me", tags=["25 Account"])
+def auth_me(user: dict = Depends(current_user)):
+    return {"user": user, "email_delivery": alerts.email_configured()}
+
+
+@app.patch("/auth/me", tags=["25 Account"])
+def auth_settings(body: s.SettingsIn, user: dict = Depends(current_user)):
+    return {"user": store.update_settings(user["id"], body.name, body.email_alerts)}
+
+
+@app.get("/user/data", tags=["25 Account"])
+def user_data(user: dict = Depends(current_user)):
+    return store.get_data(user["id"])
+
+
+@app.put("/user/data/{key}", tags=["25 Account"])
+def user_data_put(key: str, body: s.DataIn, user: dict = Depends(current_user)):
+    return _wrap(store.put_data, user["id"], key, body.value)
+
+
+@app.get("/alerts", tags=["25 Account"])
+def alerts_list(user: dict = Depends(current_user)):
+    return {"alerts": store.list_alerts(user["id"]), "email_delivery": alerts.email_configured(),
+            "check_every_seconds": alerts.ALERT_INTERVAL}
+
+
+@app.post("/alerts", tags=["25 Account"])
+def alerts_add(body: s.AlertIn, user: dict = Depends(current_user)):
+    return _wrap(store.add_alert, user["id"], body.symbol, body.type, body.price)
+
+
+@app.post("/alerts/seen", tags=["25 Account"])
+def alerts_seen(user: dict = Depends(current_user)):
+    store.mark_alerts_seen(user["id"])
+    return {"ok": True}
+
+
+@app.post("/alerts/check", tags=["25 Account"])
+def alerts_check_mine(user: dict = Depends(current_user)):
+    """Check this user's alerts right now (the page calls this on each refresh)."""
+    result = alerts.check_alerts(user["id"])
+    return {**result, "alerts": store.list_alerts(user["id"])}
+
+
+@app.post("/alerts/run-check", tags=["25 Account"])
+def alerts_run_check(authorization: str | None = Header(None)):
+    """For a cron job on hosts without a background worker (e.g. Vercel Cron)."""
+    secret = os.environ.get("CRON_SECRET")
+    if not secret or _token(authorization) != secret:
+        raise HTTPException(status_code=403, detail="Set CRON_SECRET and send it as a Bearer token.")
+    return alerts.check_alerts()
+
+
+@app.delete("/alerts/{alert_id}", tags=["25 Account"])
+def alerts_delete(alert_id: int, user: dict = Depends(current_user)):
+    store.delete_alert(user["id"], alert_id)
+    return {"ok": True}
+
+
+@app.post("/alerts/{alert_id}/rearm", tags=["25 Account"])
+def alerts_rearm(alert_id: int, user: dict = Depends(current_user)):
+    store.rearm_alert(user["id"], alert_id)
+    return {"ok": True}
+
+
 @app.get("/api/status", tags=["Meta"])
 def api_status():
-    return {"status": "ok", "docs": "/docs"}
+    return {"status": "ok", "docs": "/docs", "accounts_persistent": store.PERSISTENT,
+            "email_delivery": alerts.email_configured()}
 
 
 @app.get("/about", tags=["16 About"])
@@ -260,8 +470,11 @@ def about():
         "about_text": (
             "FinSuite is a complete finance web application covering personal finance ratios, "
             "AI assisted analysis, loan and credit risk screening, portfolio and goal planning, "
-            "live stock market data, a watchlist with price alerts, machine learning price forecasts "
-            "for the next trading day, and a built in finance glossary, all in one console. "
+            "live stock market data with technical indicators and news sentiment, a currency converter, "
+            "a stock comparison chart, a mutual fund SIP tracker, a live portfolio tracker, an income tax "
+            "calculator (old vs new regime), a loan EMI planner, a 50/30/20 budget planner, a retirement "
+            "and FIRE planner, a saved watchlist with background price alerts, machine learning price "
+            "forecasts for the next trading day, and a built in finance glossary, all in one console. "
             "Every calculator and data lookup on this site is powered by a documented backend service, "
             "and this page simply sends your inputs to it and shows the results."
         ),

@@ -187,12 +187,12 @@ _add(G, "Why is the price not moving?",
      "On a Sunday you will see Friday's closing price.",
      "Stock Market, Watchlist.")
 _add(G, "Watchlist",
-     "A personal list of stocks you want to keep an eye on, so you can see all their prices in one place without searching each time.",
+     "A personal list of stocks you want to keep an eye on, so you can see all their prices in one place without searching each time. FinSuite remembers your watchlist on this device, and across devices when you are logged in.",
      "Add TCS, Infosys and Reliance, then press Refresh to see all three prices together.",
      "Watchlist and Alerts.")
 _add(G, "Price alert",
-     "A reminder that triggers when a stock's price crosses a level you choose, either rising above it or falling below it. FinSuite checks alerts each time the watchlist refreshes while the page is open.",
-     "Set an alert for 'rises above ₹2,900' and it shows 'Alert triggered' once the price goes above that.",
+     "A reminder that triggers when a stock's price crosses a level you choose, either rising above it or falling below it. FinSuite checks alerts while the page is open and can show a desktop notification. When you are logged in, it also checks them every few minutes in the background, even with FinSuite closed, and emails you when one fires. Each alert fires once; press Re-arm to watch again.",
+     "Set an alert for 'rises above ₹2,900' and it shows 'Triggered' with the price and time once the price goes above that.",
      "Watchlist and Alerts.")
 _add(G, "52 week high and low",
      "The highest and lowest prices a stock has touched in the last year. Where today's price sits between them tells you whether it is near its yearly peak or its bottom. 0% means at the 52 week low and 100% means at the 52 week high.",
@@ -314,3 +314,127 @@ _add(G, "Why a prediction can be wrong",
      "Share prices react to news, results, global events and human mood, none of which are in the past price data alone. Short term movements are very hard to predict even for professionals. Treat the forecast as a learning exercise, never as a reason to buy or sell.",
      "A sudden company announcement can move the price far more than any model expected.",
      "ML Prediction.")
+
+# ---------------------------------------------------------------------------
+G = "7. Tax, loans and budgeting"
+# ---------------------------------------------------------------------------
+_add(G, "Tax regime (old vs new)",
+     "India has two ways to calculate income tax and you pick one each year. The new regime has lower slab rates and no tax up to ₹12 lakh of taxable income, but allows almost no deductions. The old regime has higher rates but lets you subtract deductions such as 80C, 80D, HRA and home loan interest. The Income Tax tab works out both and shows which costs less.",
+     "On a ₹15 lakh salary with no deductions, the new regime tax is ₹97,500 while the old regime tax is about ₹2.7 lakh.",
+     "Income Tax.", also=("old regime", "new regime", "tax regime"))
+_add(G, "Standard deduction",
+     "A flat amount that salaried people and pensioners can subtract from income before tax, with no proof needed. It is ₹75,000 in the new regime and ₹50,000 in the old regime.",
+     "A salary of ₹10,00,000 becomes ₹9,25,000 of taxable income in the new regime.",
+     "Income Tax.")
+_add(G, "Section 80C and other deductions",
+     "Amounts the old tax regime lets you subtract from income. 80C (up to ₹1.5 lakh) covers PPF, ELSS funds, EPF, life insurance and children's tuition. 80D covers health insurance, 80CCD(1B) gives an extra ₹50,000 for NPS, and home loan interest up to ₹2 lakh is allowed. HRA exemption reduces tax on rent paid.",
+     "Investing ₹1.5 lakh in PPF and ELSS reduces taxable income by ₹1.5 lakh under the old regime.",
+     "Income Tax.", also=("80C", "80D", "HRA", "deductions"))
+_add(G, "Tax rebate (Section 87A)",
+     "A rebate that cancels the tax of people with lower incomes. In the new regime there is no tax if taxable income is up to ₹12 lakh; in the old regime up to ₹5 lakh. Just above ₹12 lakh, marginal relief makes sure the tax is never more than the income above ₹12 lakh.",
+     "Taxable income of ₹12,25,000 would owe ₹63,750, but marginal relief lowers it to ₹25,000.",
+     "Income Tax.", also=("87A", "rebate", "marginal relief"))
+_add(G, "Surcharge",
+     "An extra tax on very high incomes, charged as a percentage of the tax: 10% above ₹50 lakh, 15% above ₹1 crore, 25% above ₹2 crore, and 37% above ₹5 crore in the old regime only.",
+     "Tax of ₹13.6 lakh on ₹60 lakh income gets a 10% surcharge of ₹1.36 lakh.",
+     "Income Tax.")
+_add(G, "Effective tax rate",
+     "Your total tax as a percentage of your whole income. It is always lower than your top slab rate because the lower slabs are taxed less.",
+     "Paying ₹97,500 tax on ₹15 lakh is an effective rate of 6.5%, even though the top slab touched is 15%.",
+     "Income Tax.")
+_add(G, "Loan prepayment",
+     "Paying back part of a loan early, on top of the regular EMI. The extra money reduces the outstanding amount, so less interest builds up and, with the same EMI, the loan finishes sooner.",
+     "Prepaying ₹2 lakh in year 1 of a ₹25 lakh, 20 year home loan at 8.5% saves several lakh of interest.",
+     "Loan EMI.", also=("prepayment", "prepay"))
+_add(G, "Repayment schedule (amortisation)",
+     "A table showing every EMI split into interest and principal, with the balance left after each payment. Early EMIs are mostly interest; later ones are mostly principal.",
+     "In the first month of a ₹25 lakh loan at 8.5%, about ₹17,700 of the ₹21,696 EMI is interest.",
+     "Loan EMI.", also=("amortization", "amortisation", "repayment schedule"))
+_add(G, "50/30/20 rule",
+     "A simple budget guide: spend about 50% of take-home income on needs, 30% on wants, and put at least 20% into savings and extra debt repayment.",
+     "On ₹80,000 a month: ₹40,000 for needs, ₹24,000 for wants and ₹16,000 for savings.",
+     "Budget Planner.", also=("budget",))
+_add(G, "Needs vs wants",
+     "Needs are spending you can't avoid: rent, groceries, bills, EMIs, transport to work. Wants are nice to have: dining out, shopping, trips, subscriptions. Money not spent counts as savings in the Budget Planner.",
+     "Groceries are a need; a weekend restaurant meal is a want.",
+     "Budget Planner.", also=("needs", "wants"))
+
+# ---------------------------------------------------------------------------
+G = "8. Mutual funds, portfolios and retirement"
+# ---------------------------------------------------------------------------
+_add(G, "Mutual fund",
+     "A pool of money from many investors that a professional manager invests in shares, bonds or both. You own units of the fund, and their value moves with the investments inside it.",
+     "Investing ₹5,000 in a fund whose unit price is ₹50 gives you 100 units.",
+     "Mutual Funds.")
+_add(G, "NAV (Net Asset Value)",
+     "The price of one unit of a mutual fund, published once each business day. It is the fund's total value divided by the number of units.",
+     "If a fund's NAV rises from ₹50 to ₹55, each unit has gained 10%.",
+     "Mutual Funds.")
+_add(G, "AMFI (Association of Mutual Funds in India)",
+     "The industry body of Indian mutual funds. It publishes every scheme's NAV each day for free, which is where FinSuite gets fund prices.",
+     "FinSuite reads AMFI's daily NAV file to search more than 10,000 schemes.",
+     "Mutual Funds, Data Sources.")
+_add(G, "Direct plan vs regular plan",
+     "The same fund comes in two versions. A direct plan is bought straight from the fund house and has lower yearly costs; a regular plan is sold through a distributor who earns a commission, so its returns are slightly lower.",
+     "A direct plan with 0.6% yearly cost versus a regular plan with 1.5% can mean lakhs of difference over 20 years.",
+     "Mutual Funds.", also=("direct plan", "regular plan"))
+_add(G, "XIRR",
+     "The yearly return on investments made at different dates, such as a monthly SIP. It treats each instalment by how long it was actually invested, so it is the fair way to measure SIP returns.",
+     "A SIP of ₹5,000 a month that grew to ₹4.9 lakh from ₹3.5 lakh invested over about 6 years has an XIRR of about 12%.",
+     "Mutual Funds.")
+_add(G, "Unrealised gain",
+     "Profit or loss on investments you still hold: current value minus what you paid. It becomes 'realised' only when you sell.",
+     "10 shares bought at ₹3,000 and now worth ₹3,500 have an unrealised gain of ₹5,000.",
+     "Portfolio Tracker.", q="What is unrealised profit or loss?", also=("unrealised profit", "pnl", "unrealized gain"))
+_add(G, "Asset allocation",
+     "How your money is spread across different investments. The weight of a holding is its share of the total value. Too much in one stock raises risk.",
+     "If one stock is ₹80,000 of a ₹1,00,000 portfolio, its weight is 80%, which is very concentrated.",
+     "Portfolio Tracker.", also=("allocation",))
+_add(G, "FIRE (Financial independence, retire early)",
+     "A goal of saving and investing enough that your investments can pay your living costs for good, so working becomes optional. The 'FIRE number' is the amount needed for that.",
+     "Spending ₹6 lakh a year, the FIRE number with the 4% rule is ₹1.5 crore.",
+     "Retirement and FIRE.", also=("fire number",))
+_add(G, "Safe withdrawal rate (4% rule)",
+     "The share of your savings you can take out each year (rising with inflation) with a good chance of the money lasting. 4% is a common rule of thumb, which means you need about 25 times your yearly expenses.",
+     "With ₹1 crore saved, 4% is ₹4 lakh in the first year.",
+     "Retirement and FIRE.", also=("4% rule", "withdrawal rate"))
+_add(G, "Real return",
+     "Your return after taking away inflation. It shows how much your buying power really grows.",
+     "An 8% return with 6% inflation is a real return of about 1.9%.",
+     "Retirement and FIRE.")
+
+# ---------------------------------------------------------------------------
+G = "9. Charts, news and currencies"
+# ---------------------------------------------------------------------------
+_add(G, "Technical indicators",
+     "Calculations drawn on a price chart to help read trends and momentum, such as moving averages, Bollinger bands and RSI. They describe past prices and do not predict the future.",
+     "Turn on SMA 50 and RSI on the Stock Market chart to see the trend and momentum together.",
+     "Stock Market.")
+_add(G, "SMA and EMA",
+     "SMA (simple moving average) is the plain average of the last N closing prices. EMA (exponential moving average) gives more weight to recent days, so it reacts faster. Price above its 50 day average is often read as an uptrend.",
+     "The 20 day SMA is the average of the last 20 closes.",
+     "Stock Market.", also=("moving averages",))
+_add(G, "Bollinger bands",
+     "Two lines drawn 2 standard deviations above and below the 20 day average. Most prices stay inside them; a close outside means the move is unusually large compared with recent days.",
+     "If the 20 day average is ₹1,000 and the bands are ₹950 and ₹1,050, a close at ₹1,060 is unusually high.",
+     "Stock Market.")
+_add(G, "RSI (Relative Strength Index)",
+     "A 0 to 100 score of how strongly the price has moved up versus down over the last 14 days. Above 70 is called overbought (rose fast), below 30 oversold (fell fast).",
+     "An RSI of 75 after a sharp rally warns that the stock may cool off.",
+     "Stock Market.", also=("overbought", "oversold"))
+_add(G, "News sentiment",
+     "Whether a headline sounds good or bad for a company. FinSuite marks each headline positive, neutral or negative by counting finance words such as 'surge', 'profit', 'loss' and 'downgrade'. It is a rough guide, not a full reading of the article.",
+     "'Shares rally after record profit' is positive; 'Stock falls on weak results' is negative.",
+     "Stock Market, ML Prediction.", also=("sentiment",))
+_add(G, "Exchange rate",
+     "How much of one currency you get for one unit of another. It changes every moment the currency market is open.",
+     "If USD/INR is 94.7, then $100 equals ₹9,470.",
+     "Currency and Compare, Portfolio Tracker.", also=("currency", "forex"))
+_add(G, "Correlation",
+     "A number from -1 to +1 showing how two prices move together. Near +1 they rise and fall together, near 0 they are unrelated, near -1 they move opposite ways. Owning things with low correlation spreads risk.",
+     "TCS and Infosys have a high correlation because both are Indian IT companies.",
+     "Currency and Compare.")
+_add(G, "Maximum drawdown",
+     "The biggest fall from a peak to a later low during the period, in percent. It shows the worst loss someone who bought at the top would have sat through.",
+     "A stock that went from ₹200 down to ₹150 before recovering had a maximum drawdown of 25%.",
+     "Currency and Compare.", also=("drawdown",))

@@ -5,33 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FinSuite — Python API</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230E7C7B%27/%3E%3Cpath d=%27M7 23l6-7 5 4 7-10%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<meta name="theme-color" content="#13224A">
+<script>try{var t=localStorage.getItem("fs-theme");if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 <link rel="stylesheet" href="/static/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
 <header class="topbar">
+  <button class="top-btn nav-toggle" id="navToggle" aria-expanded="false" aria-controls="tabs">☰ <span id="navCurrent">01 Ratios</span></button>
   <div class="brand">FinSuite</div>
+  <div class="top-actions">
+    <button class="top-btn icon-btn" id="themeToggle" title="Switch dark / light mode" aria-label="Switch dark or light mode">🌙</button>
+    <button class="top-btn" id="accountBtn" onclick="openAccount()">👤 <span class="lbl" id="accountLabel">Log in</span></button>
+  </div>
 </header>
 
-<nav class="tabs" id="tabs">
-  <button class="tab active" data-tab="ratios">01 Ratios</button>
-  <button class="tab" data-tab="report">02 Finance Report</button>
-  <button class="tab" data-tab="assistant">03 AI Assistant</button>
-  <button class="tab" data-tab="loans">04 Loan Insights</button>
-  <button class="tab" data-tab="credit">05 Credit &amp; Risk</button>
-  <button class="tab" data-tab="invest">06 Investment Call</button>
-  <button class="tab" data-tab="perf">07 Company Perf.</button>
-  <button class="tab" data-tab="dashboard">08 Portfolio Dash.</button>
-  <button class="tab" data-tab="goals">09 Goals &amp; Retirement</button>
-  <button class="tab" data-tab="knowledge">10 Knowledge Center</button>
-  <button class="tab" data-tab="market">11 Stock Market</button>
-  <button class="tab" data-tab="planner">12 Growth &amp; Target</button>
-  <button class="tab" data-tab="tax">13 Portfolio &amp; Tax</button>
-  <button class="tab" data-tab="watchlist">14 Watchlist &amp; Alerts</button>
-  <button class="tab" data-tab="sources">15 Data Sources</button>
-  <button class="tab" data-tab="about">16 About</button>
-<button class="tab" data-tab="predict">17 ML Prediction</button>
+<nav class="nav" id="tabs" aria-label="Sections">
+  <div class="nav-group">
+    <button type="button" class="nav-group-btn">Personal finance <span class="nav-current"></span><span class="caret">▾</span></button>
+    <div class="nav-menu">
+      <button class="tab" data-tab="report">02 Finance Report</button>
+      <button class="tab" data-tab="assistant">03 AI Assistant</button>
+      <button class="tab" data-tab="budget">20 Budget Planner<span class="new">new</span></button>
+      <button class="tab" data-tab="incometax">18 Income Tax<span class="new">new</span></button>
+      <button class="tab" data-tab="emi">19 Loan EMI<span class="new">new</span></button>
+      <button class="tab" data-tab="goals">09 Goals &amp; Retirement</button>
+      <button class="tab" data-tab="fire">23 Retirement &amp; FIRE<span class="new">new</span></button>
+    </div>
+  </div>
+  <div class="nav-group">
+    <button type="button" class="nav-group-btn">Markets &amp; investing <span class="nav-current"></span><span class="caret">▾</span></button>
+    <div class="nav-menu">
+      <button class="tab" data-tab="market">11 Stock Market</button>
+      <button class="tab" data-tab="fx">24 Currency &amp; Compare<span class="new">new</span></button>
+      <button class="tab" data-tab="watchlist">14 Watchlist &amp; Alerts</button>
+      <button class="tab" data-tab="tracker">22 Portfolio Tracker<span class="new">new</span></button>
+      <button class="tab" data-tab="mf">21 Mutual Funds &amp; SIP<span class="new">new</span></button>
+      <button class="tab" data-tab="planner">12 Growth &amp; Target</button>
+      <button class="tab" data-tab="tax">13 Portfolio &amp; Tax</button>
+      <button class="tab" data-tab="predict">17 ML Prediction</button>
+    </div>
+  </div>
+  <div class="nav-group">
+    <button type="button" class="nav-group-btn">Business &amp; credit <span class="nav-current"></span><span class="caret">▾</span></button>
+    <div class="nav-menu">
+      <button class="tab active" data-tab="ratios">01 Ratios</button>
+      <button class="tab" data-tab="loans">04 Loan Insights</button>
+      <button class="tab" data-tab="credit">05 Credit &amp; Risk</button>
+      <button class="tab" data-tab="invest">06 Investment Call</button>
+      <button class="tab" data-tab="perf">07 Company Perf.</button>
+      <button class="tab" data-tab="dashboard">08 Portfolio Dash.</button>
+    </div>
+  </div>
+  <div class="nav-group">
+    <button type="button" class="nav-group-btn">Learn &amp; info <span class="nav-current"></span><span class="caret">▾</span></button>
+    <div class="nav-menu">
+      <button class="tab" data-tab="knowledge">10 Knowledge Center</button>
+      <button class="tab" data-tab="sources">15 Data Sources</button>
+      <button class="tab" data-tab="about">16 About</button>
+    </div>
+  </div>
 </nav>
 
 <main>
@@ -40,14 +74,14 @@
   <section id="panel-ratios" class="panel active">
     <div class="grid-2">
       <div class="card">
-        <h2>ROE — Return on Equity</h2>
+        <h2>ROE — Return on Equity<span class="info" data-term="ROE" tabindex="0" role="button" aria-label="Explain ROE"></span></h2>
         <div class="field"><label>Net Income (₹)</label><input id="roeIncome" type="number" value="100000"></div>
         <div class="field"><label>Equity (₹)</label><input id="roeEquity" type="number" value="500000"></div>
         <button class="btn" onclick="calcROE()">Calculate</button>
         <div class="result-box" id="roeResult">—</div>
       </div>
       <div class="card">
-        <h2>ROA — Return on Assets</h2>
+        <h2>ROA — Return on Assets<span class="info" data-term="ROA" tabindex="0" role="button" aria-label="Explain ROA"></span></h2>
         <div class="field"><label>Net Income (₹)</label><input id="roaIncome" type="number" value="100000"></div>
         <div class="field"><label>Assets (₹)</label><input id="roaAssets" type="number" value="1000000"></div>
         <button class="btn" onclick="calcROA()">Calculate</button>
@@ -56,14 +90,14 @@
     </div>
     <div class="grid-2">
       <div class="card">
-        <h2>Debt Ratio</h2>
+        <h2>Debt Ratio<span class="info" data-term="Debt ratio" tabindex="0" role="button" aria-label="Explain Debt ratio"></span></h2>
         <div class="field"><label>Liabilities (₹)</label><input id="drLiab" type="number" value="400000"></div>
         <div class="field"><label>Assets (₹)</label><input id="drAssets" type="number" value="1000000"></div>
         <button class="btn" onclick="calcDebtRatio()">Calculate</button>
         <div class="result-box" id="drResult">—</div>
       </div>
       <div class="card">
-        <h2>Health Score (ROE-based)</h2>
+        <h2>Health Score (ROE-based)<span class="info" data-term="Financial health" tabindex="0" role="button" aria-label="Explain Financial health"></span></h2>
         <div class="field"><label>ROE (%)</label><input id="hsRoe" type="number" value="18"></div>
         <button class="btn" onclick="calcHealth()">Calculate</button>
         <div class="result-box" id="hsResult">—</div>
@@ -81,11 +115,12 @@
         <div class="field"><label>Savings (₹)</label><input id="repSavings" type="number" value="40000"></div>
       </div>
       <div class="row">
-        <div class="field"><label>Debt (₹)</label><input id="repDebt" type="number" value="200000"></div>
-        <div class="field"><label>Equity (₹)</label><input id="repEquity" type="number" value="500000"></div>
+        <div class="field"><label>Debt (₹)<span class="info" data-term="Debt" tabindex="0" role="button" aria-label="Explain Debt"></span></label><input id="repDebt" type="number" value="200000"></div>
+        <div class="field"><label>Equity (₹)<span class="info" data-term="Equity" tabindex="0" role="button" aria-label="Explain Equity"></span></label><input id="repEquity" type="number" value="500000"></div>
       </div>
       <button class="btn" onclick="calcReport()">Generate report</button>
       <div id="reportOut" style="margin-top:14px;"></div>
+      <div class="export-row" id="export-report" hidden><button class="btn secondary sm" onclick="doExport('report','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('report','xlsx')">⬇ Download Excel</button></div>
     </div>
   </section>
 
@@ -100,7 +135,7 @@
       </div>
     </div>
     <div class="card">
-      <h2>Leverage &amp; Savings Snapshot</h2>
+      <h2>Leverage &amp; Savings Snapshot<span class="info" data-term="Leverage" tabindex="0" role="button" aria-label="Explain Leverage"></span></h2>
       <div class="row">
         <div class="field"><label>Income (₹)</label><input id="asIncome" type="number" value="80000"></div>
         <div class="field"><label>Expenses (₹)</label><input id="asExpenses" type="number" value="50000"></div>
@@ -125,8 +160,8 @@
         <div class="field"><label>Customer name</label><input id="loanName" type="text" value="R. Verma"></div>
         <div class="field"><label>Income (₹/mo)</label><input id="loanIncome" type="number" value="65000"></div>
         <div class="field"><label>Loan amount (₹)</label><input id="loanAmount" type="number" value="500000"></div>
-        <div class="field"><label>EMI (₹/mo)</label><input id="loanEmi" type="number" value="12000"></div>
-        <div class="field"><label>Credit score</label><input id="loanScore" type="number" value="810"></div>
+        <div class="field"><label>EMI (₹/mo)<span class="info" data-term="EMI" tabindex="0" role="button" aria-label="Explain EMI"></span></label><input id="loanEmi" type="number" value="12000"></div>
+        <div class="field"><label>Credit score<span class="info" data-term="Credit score" tabindex="0" role="button" aria-label="Explain Credit score"></span></label><input id="loanScore" type="number" value="810"></div>
       </div>
       <div class="btn-row">
         <button class="btn secondary" onclick="addLoanRow()">Add customer</button>
@@ -134,6 +169,7 @@
         <button class="btn" onclick="screenLoans()">Screen all</button>
       </div>
       <div class="table-wrap"><table id="loanTable"></table></div>
+      <div class="export-row" id="export-loans" hidden><button class="btn secondary sm" onclick="doExport('loans','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('loans','xlsx')">⬇ Download Excel</button></div>
     </div>
   </section>
 
@@ -141,14 +177,14 @@
   <section id="panel-credit" class="panel">
     <div class="grid-2">
       <div class="card">
-        <h2>Credit Score Lookup</h2>
+        <h2>Credit Score Lookup<span class="info" data-term="Credit score categories" tabindex="0" role="button" aria-label="Explain Credit score categories"></span></h2>
         <div class="field"><label>Credit Score (300–900)</label><input id="csScore" type="number" value="780"></div>
         <button class="btn" onclick="calcCreditScore()">Check</button>
         <div class="result-box" id="csResult">—</div>
         <div class="insight-box" id="csInsight" style="display:none;"><span class="lbl">Insight</span><span id="csInsightText"></span></div>
       </div>
       <div class="card">
-        <h2>Customer Risk Assessment</h2>
+        <h2>Customer Risk Assessment<span class="info" data-term="Credit risk level" tabindex="0" role="button" aria-label="Explain Credit risk level"></span></h2>
         <div class="field"><label>Name</label><input id="riskName" type="text" value="R. Verma"></div>
         <div class="field"><label>Income (₹/mo)</label><input id="riskIncome" type="number" value="50000"></div>
         <div class="field"><label>EMI (₹/mo)</label><input id="riskEmi" type="number" value="22000"></div>
@@ -163,10 +199,10 @@
   <!-- ============ 06 INVESTMENT RECOMMENDATION ============ -->
   <section id="panel-invest" class="panel">
     <div class="card">
-      <h2>Single-Company BUY / HOLD / AVOID</h2>
+      <h2>Single-Company BUY / HOLD / AVOID<span class="info" data-term="Investment call" tabindex="0" role="button" aria-label="Explain Investment call"></span></h2>
       <div class="row">
         <div class="field"><label>Revenue Growth (%)</label><input id="invRevenue" type="number" value="20"></div>
-        <div class="field"><label>Profit Margin (%)</label><input id="invProfit" type="number" value="18"></div>
+        <div class="field"><label>Profit Margin (%)<span class="info" data-term="Profit margin" tabindex="0" role="button" aria-label="Explain Profit margin"></span></label><input id="invProfit" type="number" value="18"></div>
       </div>
       <div class="row">
         <div class="field"><label>ROA (%)</label><input id="invRoa" type="number" value="12"></div>
@@ -181,7 +217,7 @@
   <!-- ============ 07 COMPANY PERFORMANCE ============ -->
   <section id="panel-perf" class="panel">
     <div class="card">
-      <h2>Company Performance Score</h2>
+      <h2>Company Performance Score<span class="info" data-term="Company performance score" tabindex="0" role="button" aria-label="Explain Company performance score"></span></h2>
       <div class="field"><label>Company name</label><input id="perfName" type="text" value="Acme Corp"></div>
       <div class="row">
         <div class="field"><label>Revenue Growth (%)</label><input id="perfRevenue" type="number" value="20"></div>
@@ -196,7 +232,7 @@
   <!-- ============ 08 PORTFOLIO DASHBOARD ============ -->
   <section id="panel-dashboard" class="panel">
     <div class="card">
-      <h2>Multi-Company Screener</h2>
+      <h2>Multi-Company Screener<span class="info" data-term="Portfolio score" tabindex="0" role="button" aria-label="Explain Portfolio score"></span></h2>
       <p class="muted">Add companies (by ratios, or by raw financials — either works), then screen with <code>POST /portfolio</code>.</p>
       <div class="row">
         <div class="field"><label>Company</label><input id="dashCompany" type="text" value="JP Morgan"></div>
@@ -228,7 +264,7 @@
   <!-- ============ 09 GOAL & RETIREMENT PLANNER ============ -->
   <section id="panel-goals" class="panel">
     <div class="card">
-      <h2>Goal Planner</h2>
+      <h2>Goal Planner<span class="info" data-term="Goal planning" tabindex="0" role="button" aria-label="Explain Goal planning"></span></h2>
       <div class="row">
         <div class="field"><label>Goal name</label><input id="goalName" type="text" value="Retirement"></div>
         <div class="field"><label>Target amount today (₹)</label><input id="goalTarget" type="number" value="5000000"></div>
@@ -236,8 +272,8 @@
       </div>
       <div class="row">
         <div class="field"><label>Current savings (₹)</label><input id="goalCurrent" type="number" value="200000"></div>
-        <div class="field"><label>Expected return (%/yr)</label><input id="goalReturn" type="number" value="12"></div>
-        <div class="field"><label>Inflation (%/yr)</label><input id="goalInflation" type="number" value="6"></div>
+        <div class="field"><label>Expected return (%/yr)<span class="info" data-term="Expected return" tabindex="0" role="button" aria-label="Explain Expected return"></span></label><input id="goalReturn" type="number" value="12"></div>
+        <div class="field"><label>Inflation (%/yr)<span class="info" data-term="Inflation" tabindex="0" role="button" aria-label="Explain Inflation"></span></label><input id="goalInflation" type="number" value="6"></div>
       </div>
       <div class="field" style="max-width:240px;"><label>Monthly income (₹, optional)</label><input id="goalIncome" type="number" value="80000"></div>
       <button class="btn" onclick="calcGoalPlan()">Calculate plan</button>
@@ -245,9 +281,11 @@
       <div class="stat-strip" id="goalStats" style="display:none;"></div>
       <div class="chart-box" id="goalChartWrap" style="display:none;"><canvas id="goalChart"></canvas></div>
       <div class="insight-box" id="goalInsight" style="display:none;"><span class="lbl">AI insight</span><span id="goalInsightText"></span></div>
+      <div class="export-row" id="export-goals" hidden><button class="btn secondary sm" onclick="doExport('goals','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('goals','xlsx')">⬇ Download Excel</button></div>
+      <p class="muted" style="margin-top:12px;">Planning for retirement? The <button class="btn link" onclick="showTab('fire')">Retirement &amp; FIRE planner</button> also covers the years after you stop working.</p>
     </div>
     <div class="card">
-      <h2>Emergency Fund Check</h2>
+      <h2>Emergency Fund Check<span class="info" data-term="Emergency fund" tabindex="0" role="button" aria-label="Explain Emergency fund"></span></h2>
       <div class="row">
         <div class="field"><label>Monthly essential expenses (₹)</label><input id="efExpenses" type="number" value="40000"></div>
         <div class="field"><label>Current savings (₹)</label><input id="efSavings" type="number" value="150000"></div>
@@ -274,7 +312,7 @@
   <!-- ============ 11 STOCK MARKET WORKSPACE ============ -->
   <section id="panel-market" class="panel">
     <div class="card">
-      <h2>Quote &amp; Daily History</h2>
+      <h2>Quote &amp; Daily History<span class="info" data-term="Live quote" tabindex="0" role="button" aria-label="Explain Live quote"></span></h2>
       <p class="muted">Search <b>any</b> listed company, ETF or index — NSE, BSE, US and more. No API key needed: live quotes and history come from Yahoo Finance (via <code>yfinance</code>).</p>
       <div class="row">
         <div class="field"><label>Company — open the list, or search any listed company</label>
@@ -295,7 +333,16 @@
       </div>
       <div class="result-box" id="marketStatus">—</div>
       <div class="muted" id="historyStatus" style="margin-top:12px;"></div>
+      <div class="chips" id="indicatorChips"><span class="muted" style="margin:0;">Chart indicators<span class="info" data-term="Technical indicators" tabindex="0" role="button" aria-label="Explain Technical indicators"></span></span>
+        <label class="chip"><input type="checkbox" data-ind="sma20" checked> SMA 20</label>
+        <label class="chip"><input type="checkbox" data-ind="sma50" checked> SMA 50<span class="info" data-term="SMA and EMA" tabindex="0" role="button" aria-label="Explain SMA and EMA"></span></label>
+        <label class="chip"><input type="checkbox" data-ind="ema20"> EMA 20</label>
+        <label class="chip"><input type="checkbox" data-ind="bb"> Bollinger bands<span class="info" data-term="Bollinger bands" tabindex="0" role="button" aria-label="Explain Bollinger bands"></span></label>
+        <label class="chip"><input type="checkbox" data-ind="rsi" checked> RSI<span class="info" data-term="RSI" tabindex="0" role="button" aria-label="Explain RSI"></span></label>
+      </div>
       <div class="chart-box" id="historyChartBox" hidden><canvas id="historyChart"></canvas></div>
+      <div class="chart-box short" id="rsiChartBox" hidden><canvas id="rsiChart"></canvas></div>
+      <div class="insight-box" id="indicatorSignals" hidden><span class="lbl">What the indicators say (not advice)</span><div id="indicatorSignalsText"></div></div>
       <div class="table-wrap"><table id="marketTable" class="ohlc"></table></div>
       <div class="btn-row"><button class="btn secondary" id="historyMore" onclick="toggleHistoryRows()" hidden></button></div>
       <div class="meta history-legend" id="historyLegend" hidden>
@@ -304,12 +351,12 @@
         <b>High</b> / <b>Low</b> – highest and lowest price during the day ·
         <b>Close</b> – last price of the day (the official daily price) ·
         <b>Change</b> – Close vs the previous day's Close (<span class="badge-good">▲ up</span> / <span class="badge-warn">▼ down</span>) ·
-        <b>Volume</b> – number of shares traded that day. Hover a column heading for details.
+        <b>Volume</b> – number of shares traded that day. Hover a column heading for details.<span class="info" data-term="Open, High, Low, Close and Volume" tabindex="0" role="button" aria-label="Explain Open, High, Low, Close and Volume"></span>
       </div>
     </div>
     <div class="card">
-      <h2>News</h2>
-      <p class="muted">Latest headlines from the last 7 days, newest first, via Google News' public RSS feed (no API key). Picking a company above loads its news automatically; leave the box empty for overall market news.</p>
+      <h2>News &amp; Sentiment<span class="info" data-term="News sentiment" tabindex="0" role="button" aria-label="Explain News sentiment"></span></h2>
+      <p class="muted">Latest headlines from the last 7 days, newest first, via Google News' public RSS feed (no API key). Picking a company above loads its news automatically; leave the box empty for overall market news. Each headline is marked <span class="badge positive">positive</span>, <span class="badge neutral">neutral</span> or <span class="badge negative">negative</span> by a finance word list.</p>
       <div class="row">
         <div class="field"><label>Tickers or topic (comma-separated)</label><input id="newsSymbols" type="text" value="RELIANCE.NS" placeholder="Empty = overall market news"></div>
       </div>
@@ -326,7 +373,7 @@
   <section id="panel-planner" class="panel">
     <div class="grid-2">
       <div class="card">
-        <h2>What-If Growth</h2>
+        <h2>What-If Growth<span class="info" data-term="What if and CAGR" tabindex="0" role="button" aria-label="Explain What if and CAGR"></span></h2>
         <div class="field"><label>Amount invested (₹)</label><input id="wiAmount" type="number" value="10000"></div>
         <div class="field"><label>Price then (₹)</label><input id="wiThen" type="number" value="2500"></div>
         <div class="field"><label>Price now (₹)</label><input id="wiNow" type="number" value="2800"></div>
@@ -335,7 +382,7 @@
         <div class="result-box" id="wiResult">—</div>
       </div>
       <div class="card">
-        <h2>Target / Stop-Loss Plan</h2>
+        <h2>Target / Stop-Loss Plan<span class="info" data-term="Target price and stop loss" tabindex="0" role="button" aria-label="Explain Target price and stop loss"></span></h2>
         <div class="field"><label>Entry price (₹)</label><input id="tpEntry" type="number" value="2500"></div>
         <div class="field"><label>Quantity</label><input id="tpQty" type="number" value="10"></div>
         <div class="field"><label>Target %</label><input id="tpTarget" type="number" value="15"></div>
@@ -349,7 +396,7 @@
   <!-- ============ 13 PORTFOLIO & TAX TOOLS ============ -->
   <section id="panel-tax" class="panel">
     <div class="card">
-      <h2>SIP vs Lump Sum</h2>
+      <h2>SIP vs Lump Sum<span class="info" data-term="SIP vs lump sum" tabindex="0" role="button" aria-label="Explain SIP vs lump sum"></span></h2>
       <div class="row">
         <div class="field"><label>Total to invest (₹)</label><input id="sipTotal" type="number" value="60000"></div>
         <div class="field"><label>Months</label><input id="sipMonths" type="number" value="12"></div>
@@ -361,7 +408,7 @@
       <div class="result-box" id="sipResult">—</div>
     </div>
     <div class="card">
-      <h2>Capital Gains Tax (India, simplified)</h2>
+      <h2>Capital Gains Tax (India, simplified)<span class="info" data-term="Capital gains tax" tabindex="0" role="button" aria-label="Explain Capital gains tax"></span></h2>
       <div class="row">
         <div class="field"><label>Buy price (₹)</label><input id="taxBuy" type="number" value="2500"></div>
         <div class="field"><label>Sell price (₹)</label><input id="taxSell" type="number" value="2800"></div>
@@ -376,7 +423,7 @@
       <div class="result-box" id="taxResult">—</div>
     </div>
     <div class="card">
-      <h2>52-Week Range Check</h2>
+      <h2>52-Week Range Check<span class="info" data-term="52 week high and low" tabindex="0" role="button" aria-label="Explain 52 week high and low"></span></h2>
       <div class="row">
         <div class="field"><label>Current price (₹)</label><input id="rangeCurrent" type="number" value="2650"></div>
         <div class="field"><label>52-week high (₹)</label><input id="rangeHigh" type="number" value="3100"></div>
@@ -390,8 +437,8 @@
   <!-- ============ 14 WATCHLIST & PRICE ALERTS ============ -->
   <section id="panel-watchlist" class="panel">
     <div class="card">
-      <h2>Watchlist</h2>
-      <p class="muted">No dedicated backend for this section — it reuses <code>GET /market/quote</code> from section 11 (no API key needed). Prices refresh automatically every 30 s while this tab is open, and price alerts are checked on every refresh.</p>
+      <h2>Watchlist<span class="info" data-term="Watchlist" tabindex="0" role="button" aria-label="Explain Watchlist"></span></h2>
+      <p class="muted">Prices come from <code>GET /market/quote</code> (no API key needed) and refresh every 30 s while this tab is open. Your watchlist is saved on this device, and in your account when you are logged in, so it is still here after a reload.</p>
       <div class="btn-row">
         <div class="field" style="margin:0;min-width:300px;">
           <div class="picker" id="wlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Choose a company to add…</span><span class="picker-sym"></span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="wlSymbol" value="">
@@ -403,13 +450,15 @@
       <div class="table-wrap"><table id="wlTable"></table></div>
     </div>
     <div class="card">
-      <h2>Price Alerts</h2>
+      <h2>Price Alerts<span class="info" data-term="Price alert" tabindex="0" role="button" aria-label="Explain Price alert"></span></h2>
       <div class="row">
         <div class="field"><label>Symbol</label><select id="alertSymbol"></select></div>
         <div class="field"><label>Alert type</label><select id="alertType"><option value="above">Price rises above</option><option value="below">Price falls below</option></select></div>
         <div class="field"><label>Target price (in the stock's currency)</label><input id="alertPrice" type="number" value="2900"></div>
       </div>
-      <button class="btn" onclick="addPriceAlert()">Add alert</button>
+      <div class="btn-row"><button class="btn" onclick="addPriceAlert()">Add alert</button>
+        <button class="btn secondary" id="notifyBtn" onclick="enableNotifications()">🔔 Enable desktop notifications</button></div>
+      <div class="insight-box" id="alertMode"></div>
       <div class="table-wrap"><table id="alertTable"></table></div>
     </div>
   </section>
@@ -419,9 +468,13 @@
     <div class="card">
       <h2>Data Sources</h2>
       <p class="muted">Where the information shown in FinSuite comes from.</p>
-      <div class="result-box"><b>Yahoo Finance</b><br>Live stock quotes, daily price history (open, high, low, close, volume) and company search for NSE, BSE, US and other markets.<br><span class="muted">Used in: Stock Market, Watchlist &amp; Alerts, ML Prediction.</span></div>
-      <div class="result-box"><b>Google News</b><br>Latest news headlines from the last 7 days for the selected company or the overall market.<br><span class="muted">Used in: Stock Market.</span></div>
-      <div class="result-box"><b>Your own inputs</b><br>All calculators and planners work only on the numbers you enter. No outside data is used.<br><span class="muted">Used in: Ratios, Finance Report, Assistant, Loans, Credit and Risk, Investment Call, Company Performance, Portfolio Dashboard, Goals, Growth and Target, Portfolio and Tax.</span></div>
+      <div class="result-box"><b>Yahoo Finance</b><br>Live stock quotes, daily price history (open, high, low, close, volume) and company search for NSE, BSE, US and other markets.<br><span class="muted">Used in: Stock Market, Watchlist &amp; Alerts, ML Prediction, Portfolio Tracker, Currency &amp; Compare.</span></div>
+      <div class="result-box"><b>Yahoo Finance currency pairs</b><br>Live exchange rates such as USD/INR, used to convert currencies and to add up foreign holdings in rupees.<br><span class="muted">Used in: Currency &amp; Compare, Portfolio Tracker.</span></div>
+      <div class="result-box"><b>AMFI (Association of Mutual Funds in India)</b><br>The official daily NAV of every Indian mutual fund scheme, from AMFI's free public file. No API key.<br><span class="muted">Used in: Mutual Funds &amp; SIP.</span></div>
+      <div class="result-box"><b>mfapi.in</b><br>A free public mirror of AMFI's historical NAVs, used for fund charts and SIP returns. No API key.<br><span class="muted">Used in: Mutual Funds &amp; SIP.</span></div>
+      <div class="result-box"><b>Google News</b><br>Latest news headlines from the last 7 days for the selected company or the overall market.<br><span class="muted">Used in: Stock Market (with headline sentiment), ML Prediction.</span></div>
+      <div class="result-box"><b>Your own inputs</b><br>All calculators and planners work only on the numbers you enter. No outside data is used.<br><span class="muted">Used in: Ratios, Finance Report, Assistant, Loans, Credit and Risk, Investment Call, Company Performance, Portfolio Dashboard, Goals, Growth and Target, Portfolio and Tax, Income Tax, Loan EMI, Budget Planner, Retirement and FIRE.</span></div>
+      <div class="result-box"><b>Your account</b><br>If you create an account, your watchlist, portfolio holdings and price alerts are saved on the FinSuite server so they follow you to any device. Passwords are stored only as a salted hash.<br><span class="muted">Used in: Watchlist &amp; Alerts, Portfolio Tracker.</span></div>
       <div class="meta" style="margin-top:10px;">Market prices can be delayed by a few minutes. FinSuite is an educational tool and not investment advice.</div>
     </div>
   </section>
@@ -430,7 +483,7 @@
   <section id="panel-predict" class="panel">
     <div class="card">
       <h2>ML Next-Day Price Prediction</h2>
-      <p class="muted">Trains <b>Linear Regression</b> and <b>Random Forest</b> (scikit-learn) on the stock's own daily history — moving averages (7/30 day), daily return and volatility — then forecasts the next trading day's close. Models are tested on the most recent 20% of days they never saw, and compared with the naive guess "tomorrow = today". Data: Yahoo Finance, no API key.</p>
+      <p class="muted">Trains <b>Linear Regression</b> and <b>Random Forest</b> (scikit-learn) on the stock's own daily history — moving averages (7/30 day), daily return and volatility — then forecasts the next trading day's close. Models are tested on the most recent 20% of days they never saw, and compared with the naive guess "tomorrow = today"<span class="info" data-term="Naive baseline" tabindex="0" role="button" aria-label="Explain Naive baseline"></span>. Data: Yahoo Finance, no API key.</p>
       <div class="row">
         <div class="field"><label>Company — open the list, or search any listed company</label>
           <div class="picker" id="mlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="mlSymbol" value="RELIANCE.NS">
@@ -443,11 +496,224 @@
       <div class="result-box" id="mlStatus">—</div>
       <div class="stat-strip" id="mlStats" style="display:none;"></div>
       <div class="insight-box" id="mlVerdict" style="display:none;"><span class="lbl">How to read this</span><span id="mlVerdictText"></span></div>
+      <div class="insight-box" id="mlNews" style="display:none;"><span class="lbl">News mood vs the forecast<span class="info" data-term="News sentiment" tabindex="0" role="button" aria-label="Explain News sentiment"></span></span><span id="mlNewsText"></span></div>
       <div class="chart-box" id="mlChartBox" hidden><canvas id="mlChart"></canvas></div>
       <div class="table-wrap"><table id="mlTable"></table></div>
-      <div class="meta" id="mlNote" hidden style="margin-top:10px;"><b>MAE</b> – average price error · <b>RMSE</b> – like MAE but punishes big misses · <b>MAPE</b> – average error as % of price. Lower is better. Educational only — short-term prices are hard to predict and this is not investment advice.</div>
+      <div class="meta" id="mlNote" hidden style="margin-top:10px;"><span class="info" data-term="MAE, RMSE and MAPE" tabindex="0" role="button" aria-label="Explain MAE, RMSE and MAPE"></span> <b>MAE</b> – average price error · <b>RMSE</b> – like MAE but punishes big misses · <b>MAPE</b> – average error as % of price. Lower is better. Educational only — short-term prices are hard to predict and this is not investment advice.</div>
     </div>
   </section>
+  <!-- ============ 18 INCOME TAX ============ -->
+  <section id="panel-incometax" class="panel">
+    <div class="card">
+      <h2>Income Tax: Old vs New Regime<span class="info" data-term="Tax regime" tabindex="0" role="button" aria-label="Explain Tax regime"></span></h2>
+      <p class="muted">India, FY 2025-26 (AY 2026-27). Enter your yearly income; FinSuite works out tax under both regimes and shows which saves more. Simplified: special-rate income such as capital gains is not included.</p>
+      <div class="row">
+        <div class="field"><label>Annual gross income (₹)</label><input id="itIncome" type="number" value="1800000"></div>
+        <div class="field"><label>Age</label><select id="itAge"><option value="below60">Below 60</option><option value="60to79">60 to 79</option><option value="80plus">80 and above</option></select></div>
+        <div class="field"><label>Income type<span class="info" data-term="Standard deduction" tabindex="0" role="button" aria-label="Explain Standard deduction"></span></label><select id="itSalaried"><option value="1">Salary or pension</option><option value="0">Business or other</option></select></div>
+      </div>
+      <div class="sub">Deductions (old regime only)<span class="info" data-term="Section 80C" tabindex="0" role="button" aria-label="Explain Section 80C"></span></div>
+      <div class="row">
+        <div class="field"><label>80C: PPF, ELSS, EPF, insurance (max 1.5 L)</label><input id="it80c" type="number" value="150000"></div>
+        <div class="field"><label>80D: health insurance</label><input id="it80d" type="number" value="25000"></div>
+        <div class="field"><label>NPS 80CCD(1B) (max 50,000)</label><input id="itNps" type="number" value="0"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Home loan interest (max 2 L)</label><input id="itHome" type="number" value="0"></div>
+        <div class="field"><label>HRA exemption</label><input id="itHra" type="number" value="0"></div>
+        <div class="field"><label>Other deductions</label><input id="itOther" type="number" value="0"></div>
+      </div>
+      <button class="btn" onclick="calcIncomeTax()">Compare regimes</button>
+      <div id="itOut"></div>
+      <div class="export-row" id="export-incometax" hidden><button class="btn secondary sm" onclick="doExport('incometax','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('incometax','xlsx')">⬇ Download Excel</button></div>
+    </div>
+  </section>
+
+  <!-- ============ 19 LOAN EMI ============ -->
+  <section id="panel-emi" class="panel">
+    <div class="card">
+      <h2>Loan EMI Calculator<span class="info" data-term="EMI" tabindex="0" role="button" aria-label="Explain EMI"></span></h2>
+      <p class="muted">Works for home, car, education or personal loans. Add a prepayment to see how much interest it saves.</p>
+      <div class="row">
+        <div class="field"><label>Loan amount (₹)</label><input id="emiPrincipal" type="number" value="2500000"></div>
+        <div class="field"><label>Interest rate (% a year)</label><input id="emiRate" type="number" value="8.5" step="0.05"></div>
+        <div class="field"><label>Tenure (years)</label><input id="emiYears" type="number" value="20" step="0.5"></div>
+      </div>
+      <div class="sub">Prepayment (optional)<span class="info" data-term="Loan prepayment" tabindex="0" role="button" aria-label="Explain Loan prepayment"></span></div>
+      <div class="row">
+        <div class="field"><label>One-time prepayment (₹)</label><input id="emiPrepay" type="number" value="200000"></div>
+        <div class="field"><label>Paid in month no.</label><input id="emiPrepayMonth" type="number" value="12"></div>
+        <div class="field"><label>Extra every month (₹)</label><input id="emiExtra" type="number" value="0"></div>
+      </div>
+      <button class="btn" onclick="calcEmi()">Calculate</button>
+      <div class="result-box" id="emiError" hidden></div>
+      <div class="stat-strip" id="emiStats" hidden></div>
+      <div class="insight-box" id="emiInsight" hidden><span class="lbl">Insight</span><span id="emiInsightText"></span></div>
+      <div class="chart-box" id="emiChartBox" hidden><canvas id="emiChart"></canvas></div>
+      <div id="emiTableWrap" hidden>
+        <div class="btn-row" style="margin-top:14px;"><b style="font-size:13.5px;">Repayment table<span class="info" data-term="Repayment schedule" tabindex="0" role="button" aria-label="Explain Repayment schedule"></span></b>
+          <select id="emiView" onchange="renderEmiTable()"><option value="yearly">Year by year</option><option value="monthly">Month by month</option></select>
+          <select id="emiPlan" onchange="renderEmiTable()"><option value="pre">With prepayment</option><option value="base">Without prepayment</option></select></div>
+        <div class="table-wrap tall"><table id="emiTable"></table></div>
+      </div>
+      <div class="export-row" id="export-emi" hidden><button class="btn secondary sm" onclick="doExport('emi','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('emi','xlsx')">⬇ Download Excel</button></div>
+    </div>
+  </section>
+
+  <!-- ============ 20 BUDGET PLANNER ============ -->
+  <section id="panel-budget" class="panel">
+    <div class="card">
+      <h2>Budget Planner (50/30/20 rule)<span class="info" data-term="50/30/20 rule" tabindex="0" role="button" aria-label="Explain 50/30/20 rule"></span></h2>
+      <p class="muted">List your monthly spending and mark each item as a need, a want or a saving. Money left over counts as savings.<span class="info" data-term="Needs vs wants" tabindex="0" role="button" aria-label="Explain Needs vs wants"></span></p>
+      <div class="field" style="max-width:260px;"><label>Monthly take-home income (₹)</label><input id="budIncome" type="number" value="80000"></div>
+      <div id="budItems"></div>
+      <div class="btn-row">
+        <button class="btn secondary" onclick="addBudgetItem()">+ Add item</button>
+        <button class="btn secondary" onclick="resetBudget()">Reset to example</button>
+        <button class="btn" onclick="calcBudget()">Analyse budget</button>
+      </div>
+      <div class="result-box" id="budError" hidden></div>
+      <div id="budOut" hidden>
+        <div id="budBuckets"></div>
+        <div class="grid-2" style="margin-top:6px;">
+          <div class="chart-box round"><canvas id="budPie"></canvas></div>
+          <div class="chart-box round"><canvas id="budBar"></canvas></div>
+        </div>
+        <div class="insight-box"><span class="lbl">Tips</span><div id="budTips"></div></div>
+      </div>
+      <div class="export-row" id="export-budget" hidden><button class="btn secondary sm" onclick="doExport('budget','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('budget','xlsx')">⬇ Download Excel</button></div>
+    </div>
+  </section>
+
+  <!-- ============ 21 MUTUAL FUNDS & SIP ============ -->
+  <section id="panel-mf" class="panel">
+    <div class="card">
+      <h2>Mutual Fund Search<span class="info" data-term="Mutual fund" tabindex="0" role="button" aria-label="Explain Mutual fund"></span></h2>
+      <p class="muted">Every Indian mutual fund scheme, with its latest NAV<span class="info" data-term="NAV" tabindex="0" role="button" aria-label="Explain NAV"></span>, from AMFI's free daily data. No API key.</p>
+      <div class="btn-row">
+        <input id="mfQuery" type="search" placeholder="e.g. parag parikh flexi, nifty 50 index, hdfc mid cap" style="flex:1;min-width:220px;">
+        <button class="btn" onclick="searchFunds()">Search</button>
+      </div>
+      <div id="mfResults" style="margin-top:10px;"></div>
+    </div>
+    <div class="card" id="mfFundCard" hidden>
+      <h2 id="mfFundName"></h2>
+      <div class="meta" id="mfFundMeta"></div>
+      <div class="stat-strip" id="mfReturns"></div>
+      <div class="chart-box"><canvas id="mfNavChart"></canvas></div>
+      <div class="sub" style="margin-top:16px;">SIP return tracker<span class="info" data-term="XIRR" tabindex="0" role="button" aria-label="Explain XIRR"></span></div>
+      <div class="row">
+        <div class="field"><label>Monthly SIP (₹)</label><input id="mfMonthly" type="number" value="5000"></div>
+        <div class="field"><label>SIP start date</label><input id="mfStart" type="date"></div>
+        <div class="field"><label>End date (empty = latest)</label><input id="mfEnd" type="date"></div>
+      </div>
+      <button class="btn" onclick="calcFundSip()">Calculate SIP returns</button>
+      <div class="result-box" id="mfSipError" hidden></div>
+      <div class="stat-strip" id="mfSipStats" hidden></div>
+      <div class="chart-box" id="mfSipChartBox" hidden><canvas id="mfSipChart"></canvas></div>
+      <div class="insight-box" id="mfSipInsight" hidden><span class="lbl">Insight</span><span id="mfSipInsightText"></span></div>
+      <div class="export-row" id="export-mf" hidden><button class="btn secondary sm" onclick="doExport('mf','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('mf','xlsx')">⬇ Download Excel</button></div>
+      <p class="meta" style="margin-top:10px;">Past returns do not guarantee future returns. Direct and regular plans of the same fund have different NAVs<span class="info" data-term="Direct plan vs regular plan" tabindex="0" role="button" aria-label="Explain Direct plan vs regular plan"></span>.</p>
+    </div>
+  </section>
+
+  <!-- ============ 22 PORTFOLIO TRACKER ============ -->
+  <section id="panel-tracker" class="panel">
+    <div class="card">
+      <h2>Portfolio Tracker</h2>
+      <p class="muted">Enter what you own. FinSuite values it at live prices and shows your profit or loss<span class="info" data-term="Unrealised gain" tabindex="0" role="button" aria-label="Explain Unrealised gain"></span>. Foreign stocks are converted to rupees at the live exchange rate. Holdings are saved on this device and in your account.</p>
+      <div class="row">
+        <div class="field" style="flex:2;min-width:240px;"><label>Stock</label>
+          <div class="picker" id="pfPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Choose a company…</span><span class="picker-sym"></span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="pfSymbol" value="">
+        </div>
+        <div class="field"><label>Quantity</label><input id="pfQty" type="number" value="10"></div>
+        <div class="field"><label>Average buy price (stock's currency)</label><input id="pfAvg" type="number" value="3000"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" onclick="addHolding()">Add holding</button>
+        <button class="btn secondary" onclick="loadSampleHoldings()">Load sample portfolio</button>
+        <button class="btn" onclick="valuePortfolio()">Refresh live value</button>
+        <label class="muted" style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="pfAuto" checked> Auto-refresh every 60 s</label>
+      </div>
+      <div class="result-box" id="pfStatus" hidden></div>
+      <div class="stat-strip" id="pfStats" hidden></div>
+      <div class="table-wrap"><table id="pfTable"></table></div>
+      <div class="grid-2" id="pfCharts" hidden>
+        <div class="chart-box round"><canvas id="pfPie"></canvas></div>
+        <div class="chart-box round"><canvas id="pfBar"></canvas></div>
+      </div>
+      <div class="insight-box" id="pfInsight" hidden><span class="lbl">Insight<span class="info" data-term="Asset allocation" tabindex="0" role="button" aria-label="Explain Asset allocation"></span></span><span id="pfInsightText"></span></div>
+      <div class="export-row" id="export-tracker" hidden><button class="btn secondary sm" onclick="doExport('tracker','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('tracker','xlsx')">⬇ Download Excel</button></div>
+    </div>
+  </section>
+
+  <!-- ============ 23 RETIREMENT & FIRE ============ -->
+  <section id="panel-fire" class="panel">
+    <div class="card">
+      <h2>Retirement &amp; FIRE Planner<span class="info" data-term="FIRE" tabindex="0" role="button" aria-label="Explain FIRE"></span></h2>
+      <p class="muted">Builds on the Goal Planner: works out how big a retirement corpus<span class="info" data-term="Corpus" tabindex="0" role="button" aria-label="Explain Corpus"></span> you need, whether your current investing gets you there, and the age at which you could be financially independent.</p>
+      <div class="row">
+        <div class="field"><label>Current age</label><input id="fiAge" type="number" value="30"></div>
+        <div class="field"><label>Retirement age</label><input id="fiRetire" type="number" value="55"></div>
+        <div class="field"><label>Plan until age</label><input id="fiLife" type="number" value="85"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Monthly expenses today (₹)</label><input id="fiExpenses" type="number" value="50000"></div>
+        <div class="field"><label>Savings already invested (₹)</label><input id="fiCorpus" type="number" value="500000"></div>
+        <div class="field"><label>Investing every month (₹)</label><input id="fiMonthly" type="number" value="30000"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Inflation (%/yr)</label><input id="fiInflation" type="number" value="6"></div>
+        <div class="field"><label>Return before retiring (%/yr)</label><input id="fiPre" type="number" value="12"></div>
+        <div class="field"><label>Return after retiring (%/yr)<span class="info" data-term="Real return" tabindex="0" role="button" aria-label="Explain Real return"></span></label><input id="fiPost" type="number" value="8"></div>
+        <div class="field"><label>Withdrawal rate (%)<span class="info" data-term="Safe withdrawal rate" tabindex="0" role="button" aria-label="Explain Safe withdrawal rate"></span></label><input id="fiSwr" type="number" value="4" step="0.25"></div>
+      </div>
+      <button class="btn" onclick="calcFire()">Plan my retirement</button>
+      <div class="result-box" id="fiError" hidden></div>
+      <div class="stat-strip" id="fiStats" hidden></div>
+      <div class="chart-box" id="fiChartBox" hidden><canvas id="fiChart"></canvas></div>
+      <div class="insight-box" id="fiInsight" hidden><span class="lbl">Insight</span><span id="fiInsightText"></span></div>
+      <div class="export-row" id="export-fire" hidden><button class="btn secondary sm" onclick="doExport('fire','pdf')">⬇ Download PDF</button><button class="btn secondary sm" onclick="doExport('fire','xlsx')">⬇ Download Excel</button></div>
+    </div>
+  </section>
+
+  <!-- ============ 24 CURRENCY & COMPARE ============ -->
+  <section id="panel-fx" class="panel">
+    <div class="card">
+      <h2>Currency Converter<span class="info" data-term="Exchange rate" tabindex="0" role="button" aria-label="Explain Exchange rate"></span></h2>
+      <p class="muted">Live exchange rates from Yahoo Finance, no API key.</p>
+      <div class="row" style="align-items:flex-end;">
+        <div class="field"><label>Amount</label><input id="fxAmount" type="number" value="100"></div>
+        <div class="field"><label>From</label><select id="fxFrom"></select></div>
+        <button class="btn secondary" style="margin-bottom:10px;" onclick="swapFx()" title="Swap currencies" aria-label="Swap currencies">⇄</button>
+        <div class="field"><label>To</label><select id="fxTo"></select></div>
+      </div>
+      <button class="btn" onclick="convertFx()">Convert</button>
+      <div class="result-box" id="fxResult">—</div>
+      <div class="chart-box" id="fxChartBox" hidden><canvas id="fxChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Compare Two Stocks</h2>
+      <p class="muted">Both prices are rebased to 100 on the first day so you can see which grew more, even across currencies.</p>
+      <div class="row">
+        <div class="field" style="min-width:220px;"><label>First stock</label>
+          <div class="picker" id="cmpPickerA"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Tata Consultancy Services</span><span class="picker-sym">TCS.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="cmpA" value="TCS.NS">
+        </div>
+        <div class="field" style="min-width:220px;"><label>Second stock</label>
+          <div class="picker" id="cmpPickerB"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Infosys</span><span class="picker-sym">INFY.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon">🔍</span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index…"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="cmpB" value="INFY.NS">
+        </div>
+        <div class="field" style="flex:0 0 140px;"><label>Period</label>
+          <select id="cmpPeriod"><option value="1mo">1 month</option><option value="3mo">3 months</option><option value="6mo">6 months</option><option value="1y" selected>1 year</option><option value="2y">2 years</option><option value="5y">5 years</option></select>
+        </div>
+      </div>
+      <button class="btn" onclick="compareStocks()">Compare</button>
+      <div class="result-box" id="cmpStatus" hidden></div>
+      <div class="chart-box" id="cmpChartBox" hidden><canvas id="cmpChart"></canvas></div>
+      <div class="table-wrap"><table id="cmpTable"></table></div>
+      <div class="insight-box" id="cmpInsight" hidden><span class="lbl">Summary<span class="info" data-term="Correlation" tabindex="0" role="button" aria-label="Explain Correlation"></span><span class="info" data-term="Maximum drawdown" tabindex="0" role="button" aria-label="Explain Maximum drawdown"></span></span><span id="cmpInsightText"></span></div>
+    </div>
+  </section>
+
   <!-- ============ 16 ABOUT ============ -->
   <section id="panel-about" class="panel">
     <div class="card">
@@ -472,6 +738,35 @@
   </section>
 
 </main>
+
+<div class="modal" id="accountModal" hidden role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeAccount()" aria-label="Close">×</button>
+    <div id="accountGuest">
+      <h2 id="accountTitle">Your FinSuite account</h2>
+      <p class="muted">Save your watchlist, portfolio and price alerts, and get alerts by email even when FinSuite is closed.</p>
+      <div class="result-box hold" id="accountTempNote" hidden style="font-size:12.5px;">This server is a demo host where saved accounts can be reset at any time. Your watchlist and portfolio are also kept in this browser, so you won't lose them here.</div>
+      <div class="seg"><button id="segLogin" class="on" onclick="setAuthMode('login')">Log in</button><button id="segRegister" onclick="setAuthMode('register')">Create account</button></div>
+      <form id="authForm" onsubmit="submitAuth(event)">
+        <div class="field" id="authNameField" hidden><label>Name</label><input id="authName" type="text" autocomplete="name"></div>
+        <div class="field"><label>Email</label><input id="authEmail" type="email" required autocomplete="email"></div>
+        <div class="field"><label>Password (at least 8 characters)</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password"></div>
+        <button class="btn" type="submit" id="authSubmit" style="width:100%;">Log in</button>
+        <div class="form-error" id="authError"></div>
+      </form>
+    </div>
+    <div id="accountUser" hidden>
+      <h2>Hi, <span id="accountName"></span></h2>
+      <p class="muted" id="accountEmail"></p>
+      <label class="chip" style="margin:6px 0;"><input type="checkbox" id="accountEmailAlerts" onchange="saveEmailAlerts()"> Email me when a price alert fires</label>
+      <p class="meta" id="accountEmailNote"></p>
+      <p class="muted">Your watchlist, portfolio and alerts are saved to your account automatically.</p>
+      <button class="btn secondary" onclick="logout()">Log out</button>
+    </div>
+  </div>
+</div>
+<div class="info-pop" id="infoPop" hidden role="dialog"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="/static/app.js"></script>
 </body>

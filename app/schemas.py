@@ -159,3 +159,97 @@ class Range52WIn(BaseModel):
     current: float
     high: float
     low: float
+
+# 18 Income tax
+class IncomeTaxIn(BaseModel):
+    gross_income: float = Field(ge=0, description="Annual income before deductions, ₹")
+    salaried: bool = True
+    age_group: str = Field("below60", pattern="^(below60|60to79|80plus)$")
+    sec80c: float = 0
+    sec80d: float = 0
+    nps_80ccd1b: float = 0
+    home_loan_interest: float = 0
+    hra_exemption: float = 0
+    other_deductions: float = 0
+
+
+# 19 Loan EMI
+class LoanEmiIn(BaseModel):
+    principal: float
+    annual_rate: float
+    tenure_months: int
+    prepay_amount: float = 0
+    prepay_month: int = 0
+    extra_monthly: float = 0
+
+
+# 20 Budget planner
+class BudgetItem(BaseModel):
+    category: str
+    amount: float
+    kind: str = Field(pattern="^(need|want|saving)$")
+
+
+class BudgetIn(BaseModel):
+    income: float
+    items: list[BudgetItem]
+
+
+# 21 Mutual funds
+class MfSipIn(BaseModel):
+    code: int
+    monthly: float
+    start: date
+    end: Optional[date] = None
+
+
+# 22 Portfolio tracker
+class Holding(BaseModel):
+    symbol: str = Field(min_length=1)
+    qty: float = Field(gt=0)
+    avg_price: float = Field(ge=0)
+
+
+class TrackerIn(BaseModel):
+    holdings: list[Holding] = Field(max_length=50)
+
+
+# 23 Retirement & FIRE
+class FireIn(BaseModel):
+    current_age: float
+    retire_age: float
+    life_expectancy: float = 85
+    monthly_expenses: float
+    inflation: float = 6
+    return_pre: float = 12
+    return_post: float = 8
+    current_corpus: float = 0
+    monthly_investment: float = 0
+    withdrawal_rate: float = 4
+
+
+# 25 Accounts, saved data and alerts
+class RegisterIn(BaseModel):
+    email: str
+    password: str
+    name: str = ""
+
+
+class LoginIn(BaseModel):
+    email: str
+    password: str
+
+
+class SettingsIn(BaseModel):
+    name: Optional[str] = None
+    email_alerts: Optional[bool] = None
+
+
+class DataIn(BaseModel):
+    value: object
+
+
+class AlertIn(BaseModel):
+    symbol: str = Field(min_length=1)
+    type: str = Field(pattern="^(above|below)$")
+    price: float = Field(gt=0)

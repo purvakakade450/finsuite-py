@@ -13,6 +13,10 @@ Environment=PYTHONUNBUFFERED=1
 # yfinance writes a small cache; give it a writable home
 Environment=HOME=/var/lib/finsuite
 StateDirectory=finsuite
+# Accounts, saved watchlists and alerts live here (survives updates and reboots)
+Environment=FINSUITE_DB=/var/lib/finsuite/finsuite.db
+# Optional email for price alerts: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+EnvironmentFile=-/etc/finsuite.env
 
 [Install]
 WantedBy=multi-user.target

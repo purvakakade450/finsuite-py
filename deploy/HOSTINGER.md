@@ -25,13 +25,28 @@ If the GitHub repo is private, clone it first with a token, then run `bash /opt/
 bash /opt/finsuite/deploy/update.sh
 ```
 
-## 4. Useful commands
+## 4. Email for price alerts (optional)
+Logged-in users' price alerts are checked on the server every 5 minutes. To also email them,
+create `/etc/finsuite.env` (for Gmail, use an App Password):
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=FinSuite <you@gmail.com>
+```
+Then `chmod 600 /etc/finsuite.env && systemctl restart finsuite`. Without it, fired alerts are
+shown inside the app on the user's next visit.
+
+## 5. Useful commands
 - App logs: `journalctl -u finsuite -f`
 - Restart: `systemctl restart finsuite`
 - Status: `systemctl status finsuite`
 - Nginx test: `nginx -t`
 
 ## Notes
+- Accounts, saved watchlists, portfolios and alerts are stored in `/var/lib/finsuite/finsuite.db`
+  (SQLite). Back it up with `cp /var/lib/finsuite/finsuite.db ~/finsuite-backup.db`.
 - The app listens only on 127.0.0.1:8000; nginx is the public entrance on ports 80/443.
 - Live prices and news come from Yahoo Finance and Google News. Data centre IPs are sometimes
   rate limited by Yahoo, so if quotes fail on the VPS but work elsewhere, wait a few minutes and retry.
