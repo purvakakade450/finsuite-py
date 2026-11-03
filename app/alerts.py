@@ -28,7 +28,16 @@ log = logging.getLogger("finsuite.alerts")
 
 
 def email_configured() -> bool:
+    if os.environ.get("SMTP_USER") and not os.environ.get("SMTP_PASSWORD"):
+        return False
     return bool(os.environ.get("SMTP_HOST") and os.environ.get("SMTP_FROM"))
+
+
+def explain_smtp_error(e: Exception) -> str:
+    if isinstance(e, smtplib.SMTPAuthenticationError):
+        return ("The mail server rejected the login. For Gmail, SMTP_PASSWORD must be a 16-letter "
+                "App Password (myaccount.google.com/apppasswords), not your normal password.")
+    return f"Could not send the email: {e}"
 
 
 def send_email(to: str, subject: str, body: str) -> None:
@@ -38,7 +47,8 @@ def send_email(to: str, subject: str, body: str) -> None:
     with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ.get("SMTP_PORT", 587)), timeout=20) as s:
         s.starttls()
         if os.environ.get("SMTP_USER"):
-            s.login(os.environ["SMTP_USER"], os.environ.get("SMTP_PASSWORD", ""))
+            # Google shows App Passwords in groups of four; the spaces are not part of it.
+            s.login(os.environ["SMTP_USER"], os.environ.get("SMTP_PASSWORD", "").replace(" ", ""))
         s.send_message(msg)
 
 

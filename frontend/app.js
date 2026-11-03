@@ -1269,7 +1269,8 @@ function renderAccount(){
     document.getElementById("accountName").textContent = u.name;
     document.getElementById("accountEmail").textContent = u.email;
     document.getElementById("accountEmailAlerts").checked = u.email_alerts;
-    document.getElementById("accountEmailNote").textContent = AUTH.emailDelivery ? "" : "Note: email sending is not set up on this server yet; fired alerts show in the app instead.";
+    document.getElementById("accountEmailNote").textContent = AUTH.emailDelivery ? "" : "Email sending is not set up on this server yet, so fired alerts show in the app instead.";
+    document.getElementById("testEmailBtn").hidden = !AUTH.emailDelivery;
   }
   renderAlertMode();
 }
@@ -1295,6 +1296,13 @@ async function logout(){
   ALERTS = LS.get("fs-alerts", []);
   renderAlerts(); renderAccount(); closeAccount();
   toast("Logged out. Your watchlist and portfolio stay saved in this browser.");
+}
+async function sendTestEmail(){
+  const out = document.getElementById("testEmailResult"), btn = document.getElementById("testEmailBtn");
+  btn.disabled = true; out.textContent = "Sending…";
+  try{ const r = await api("POST","/auth/test-email"); out.textContent = `Sent to ${r.to}. Check your inbox (and the spam folder).`; }
+  catch(e){ out.textContent = e.message; }
+  finally{ btn.disabled = false; }
 }
 async function saveEmailAlerts(){
   try{ AUTH.user = (await api("PATCH","/auth/me",{email_alerts: document.getElementById("accountEmailAlerts").checked})).user; renderAccount(); }catch(e){ toast(e.message, "warn"); }

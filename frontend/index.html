@@ -762,6 +762,8 @@
       <p class="muted" id="accountEmail"></p>
       <label class="chip" style="margin:6px 0;"><input type="checkbox" id="accountEmailAlerts" onchange="saveEmailAlerts()"> Email me when a price alert fires</label>
       <p class="meta" id="accountEmailNote"></p>
+      <div class="btn-row" style="margin:4px 0 10px;"><button class="btn secondary sm" id="testEmailBtn" onclick="sendTestEmail()">Send me a test email</button></div>
+      <p class="meta" id="testEmailResult"></p>
       <p class="muted">Your watchlist, portfolio and alerts are saved to your account automatically.</p>
       <button class="btn secondary" onclick="logout()">Log out</button>
     </div>

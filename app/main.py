@@ -11,6 +11,21 @@ if __package__ in (None, ""):
 import os
 from contextlib import asynccontextmanager
 
+
+def _load_env_file(path: Path) -> None:
+    """Read KEY=VALUE lines from a local .env (e.g. SMTP settings) without
+    overriding variables that are already set. The file is not committed."""
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env_file(Path(__file__).resolve().parent.parent / ".env")
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -391,6 +406,20 @@ def auth_me(user: dict = Depends(current_user)):
 @app.patch("/auth/me", tags=["25 Account"])
 def auth_settings(body: s.SettingsIn, user: dict = Depends(current_user)):
     return {"user": store.update_settings(user["id"], body.name, body.email_alerts)}
+
+
+@app.post("/auth/test-email", tags=["25 Account"])
+def auth_test_email(user: dict = Depends(current_user)):
+    """Send a test message so the user can check that alert emails arrive."""
+    if not alerts.email_configured():
+        raise HTTPException(status_code=503, detail="Email sending is not set up on this server yet.")
+    try:
+        alerts.send_email(user["email"], "FinSuite: test email",
+                          f"Hi {user['name']},\n\nThis is a test from FinSuite. Price alert emails will arrive "
+                          "at this address when an alert fires.\n\nFinSuite")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=alerts.explain_smtp_error(e))
+    return {"ok": True, "to": user["email"]}
 
 
 @app.get("/user/data", tags=["25 Account"])
