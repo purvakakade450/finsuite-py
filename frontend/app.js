@@ -1761,8 +1761,8 @@ function onTabShown(name){
   const d = new Date(); d.setFullYear(d.getFullYear() - 3);
   document.getElementById("mfStart").value = d.toISOString().slice(0,10);
   renderBudgetItems(); renderHoldings(); renderWatchlist(); renderAlerts(); renderAccount();
-  const first = location.hash.slice(1) || LS.get("fs-tab") || "ratios";
-  showTab(document.getElementById("panel-"+first) ? first : "ratios", {noHash:!location.hash, keepScroll:true});
+  const first = location.hash.slice(1) || LS.get("fs-tab") || "report";
+  showTab(document.getElementById("panel-"+first) ? first : "report", {noHash:!location.hash, keepScroll:true});
   window.addEventListener("hashchange", ()=>{ const t = location.hash.slice(1); if(t && document.getElementById("panel-"+t)) showTab(t, {noHash:true}); });
   if(AUTH.token) startSession(null, false);
   api("GET","/api/status").then(st=>{ document.getElementById("accountTempNote").hidden = st.accounts_persistent !== false; }).catch(()=>{});

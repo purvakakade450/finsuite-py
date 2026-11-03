@@ -78,87 +78,87 @@ def _wrap(fn, *args, **kwargs):
 
 
 # ---------------------------------------------------------------------------
-# 01 Ratio calculators
+# 16 Ratio calculators
 # ---------------------------------------------------------------------------
-@app.post("/ratios/roe", tags=["01 Ratios"])
+@app.post("/ratios/roe", tags=["16 Ratios"])
 def roe(body: s.ROEIn):
     return {"roe_pct": _wrap(calc.calc_roe, body.net_income, body.equity)}
 
 
-@app.post("/ratios/roa", tags=["01 Ratios"])
+@app.post("/ratios/roa", tags=["16 Ratios"])
 def roa(body: s.ROAIn):
     return {"roa_pct": _wrap(calc.calc_roa, body.net_income, body.assets)}
 
 
-@app.post("/ratios/debt-ratio", tags=["01 Ratios"])
+@app.post("/ratios/debt-ratio", tags=["16 Ratios"])
 def debt_ratio(body: s.DebtRatioIn):
     return {"debt_ratio": _wrap(calc.calc_debt_ratio, body.liabilities, body.assets)}
 
 
-@app.post("/ratios/health", tags=["01 Ratios"])
+@app.post("/ratios/health", tags=["16 Ratios"])
 def health(body: s.HealthIn):
     return {"health": calc.calc_health(body.roe)}
 
 
 # ---------------------------------------------------------------------------
-# 02 Personal finance report
+# 01 Personal finance report
 # ---------------------------------------------------------------------------
-@app.post("/report", tags=["02 Personal Finance Report"])
+@app.post("/report", tags=["01 Personal Finance Report"])
 def report(body: s.ReportIn):
     return _wrap(calc.calc_report, body.income, body.expenses, body.savings, body.debt, body.equity)
 
 # ---------------------------------------------------------------------------
-# 03 AI Finance Assistant
+# 02 AI Finance Assistant
 # ---------------------------------------------------------------------------
-@app.post("/assistant/snapshot", tags=["03 AI Finance Assistant"])
+@app.post("/assistant/snapshot", tags=["02 AI Finance Assistant"])
 def assistant_snapshot(body: s.AssistantIn):
     return _wrap(calc.calc_assistant, body.income, body.expenses, body.savings, body.borrowed, body.owned)
 
-@app.post("/assistant/chat", tags=["03 AI Finance Assistant"])
+@app.post("/assistant/chat", tags=["02 AI Finance Assistant"])
 def assistant_chat(body: s.ChatIn):
     return {"answer": calc.chat_reply(body.question)}
 
 # ---------------------------------------------------------------------------
-# 04 Loan insight generator
+# 17 Loan insight generator
 # ---------------------------------------------------------------------------
-@app.post("/loans/screen", tags=["04 Loan Insight Generator"])
+@app.post("/loans/screen", tags=["17 Loan Insight Generator"])
 def loans_screen(body: s.LoanScreenIn):
     rows = [r.model_dump() for r in body.rows]
     return {"rows": calc.screen_loans(rows)}
 
 # ---------------------------------------------------------------------------
-# 05 Credit score & risk dashboard
+# 18 Credit score & risk dashboard
 # ---------------------------------------------------------------------------
-@app.post("/credit-score", tags=["05 Credit Score & Risk"])
+@app.post("/credit-score", tags=["18 Credit Score & Risk"])
 def credit_score(body: s.CreditScoreIn):
     return _wrap(calc.calc_credit_score, body.score)
 
 
-@app.post("/risk", tags=["05 Credit Score & Risk"])
+@app.post("/risk", tags=["18 Credit Score & Risk"])
 def risk(body: s.RiskIn):
     return calc.calc_risk(body.score, body.income, body.emi, body.name)
 
 
 # ---------------------------------------------------------------------------
-# 06 Investment recommendation
+# 19 Investment recommendation
 # ---------------------------------------------------------------------------
-@app.post("/invest", tags=["06 Investment Recommendation"])
+@app.post("/invest", tags=["19 Investment Recommendation"])
 def invest(body: s.InvestIn):
     return calc.calc_invest(body.revenue_growth, body.profit_margin, body.roa, body.roe)
 
 
 # ---------------------------------------------------------------------------
-# 07 Company performance
+# 20 Company performance
 # ---------------------------------------------------------------------------
-@app.post("/company-performance", tags=["07 Company Performance"])
+@app.post("/company-performance", tags=["20 Company Performance"])
 def company_performance(body: s.CompanyPerfIn):
     return calc.analyze_company(body.name, body.revenue_growth, body.csat, body.retention)
 
 
 # ---------------------------------------------------------------------------
-# 08 Portfolio dashboard
+# 21 Portfolio dashboard
 # ---------------------------------------------------------------------------
-@app.post("/portfolio", tags=["08 Portfolio Dashboard"])
+@app.post("/portfolio", tags=["21 Portfolio Dashboard"])
 def portfolio(body: s.PortfolioIn):
     rows = [c.model_dump() for c in body.companies]
     results = [calc.compute_company_metrics(r) for r in rows]
@@ -167,29 +167,29 @@ def portfolio(body: s.PortfolioIn):
 
 
 # ---------------------------------------------------------------------------
-# 09 Goal & retirement planner
+# 06 Goal & retirement planner
 # ---------------------------------------------------------------------------
-@app.post("/goals/plan", tags=["09 Goal & Retirement Planner"])
+@app.post("/goals/plan", tags=["06 Goal & Retirement Planner"])
 def goals_plan(body: s.GoalPlanIn):
     return _wrap(calc.calc_goal_plan, body.target, body.years, body.ret, body.inflation,
                  body.current, body.income, body.name)
 
 
-@app.post("/goals/emergency-fund", tags=["09 Goal & Retirement Planner"])
+@app.post("/goals/emergency-fund", tags=["06 Goal & Retirement Planner"])
 def goals_emergency_fund(body: s.EmergencyFundIn):
     return _wrap(calc.calc_emergency_fund, body.expenses, body.savings)
 
 
 # ---------------------------------------------------------------------------
-# 10 Knowledge center
+# 22 Knowledge center
 # ---------------------------------------------------------------------------
-@app.get("/knowledge/glossary", tags=["10 Knowledge Center"])
+@app.get("/knowledge/glossary", tags=["22 Knowledge Center"])
 def knowledge_glossary():
     return {"glossary": GLOSSARY}
 
 
 # ---------------------------------------------------------------------------
-# 11 Stock market workspace — live data, no API key required (yfinance +
+# 08 Stock market workspace — live data, no API key required (yfinance +
 #    Google News RSS, see app/market.py)
 # ---------------------------------------------------------------------------
 def _market(fn, *args):
@@ -201,29 +201,29 @@ def _market(fn, *args):
         raise HTTPException(status_code=502, detail=f"Upstream data source failed: {e}")
 
 
-@app.get("/market/search", tags=["11 Stock Market"])
+@app.get("/market/search", tags=["08 Stock Market"])
 def market_search(q: str = Query(..., min_length=1), limit: int = Query(8, ge=1, le=20)):
     return {"query": q, "results": _market(market.search_symbols, q, limit)}
 
 
-@app.get("/market/quote", tags=["11 Stock Market"])
+@app.get("/market/quote", tags=["08 Stock Market"])
 def market_quote(symbol: str = Query(..., min_length=1)):
     return _market(market.get_quote, symbol)
 
-@app.get("/market/daily", tags=["11 Stock Market"])
+@app.get("/market/daily", tags=["08 Stock Market"])
 def market_daily(symbol: str = Query(..., min_length=1),
                  period: str = Query("3mo", pattern="^(1mo|3mo|6mo|1y|2y|5y|max)$")):
     return {"symbol": symbol, **_market(market.get_history, symbol, period)}
 
 
-@app.get("/market/news", tags=["11 Stock Market"])
+@app.get("/market/news", tags=["08 Stock Market"])
 def market_news(symbols: str = Query("", description="Tickers or search text; empty = general market news"),
                 limit: int = Query(10, ge=1, le=50)):
     """Headlines, each marked positive / neutral / negative, plus an overall mood."""
     return {"query": symbols, **_market(analysis.news_with_sentiment, symbols, limit)}
 
 
-@app.get("/market/indicators", tags=["11 Stock Market"])
+@app.get("/market/indicators", tags=["08 Stock Market"])
 def market_indicators(symbol: str = Query(..., min_length=1),
                       period: str = Query("6mo", pattern="^(1mo|3mo|6mo|1y|2y|5y|max)$")):
     """20/50-day moving averages, 20-day EMA, Bollinger bands (20, 2) and 14-day RSI."""
@@ -231,42 +231,42 @@ def market_indicators(symbol: str = Query(..., min_length=1),
 
 
 # ---------------------------------------------------------------------------
-# 12 Growth & target planner
+# 13 Growth & target planner
 # ---------------------------------------------------------------------------
-@app.post("/planner/what-if", tags=["12 Growth & Target Planner"])
+@app.post("/planner/what-if", tags=["13 Growth & Target Planner"])
 def planner_what_if(body: s.WhatIfIn):
     return _wrap(calc.calc_what_if, body.amount, body.price_then, body.price_now, body.days_held)
 
 
-@app.post("/planner/target-plan", tags=["12 Growth & Target Planner"])
+@app.post("/planner/target-plan", tags=["13 Growth & Target Planner"])
 def planner_target_plan(body: s.TargetPlanIn):
     return _wrap(calc.calc_target_plan, body.entry, body.qty, body.target_pct, body.stop_pct)
 
 
 # ---------------------------------------------------------------------------
-# 13 Portfolio & tax tools
+# 14 Portfolio & tax tools
 # ---------------------------------------------------------------------------
-@app.post("/tools/sip-vs-lumpsum", tags=["13 Portfolio & Tax Tools"])
+@app.post("/tools/sip-vs-lumpsum", tags=["14 Portfolio & Tax Tools"])
 def tools_sip_vs_lumpsum(body: s.SipVsLumpIn):
     return _wrap(calc.compare_sip_lump_sum, body.total, body.months, body.start_price,
                  body.prices_by_month, body.last_price)
 
 
-@app.post("/tools/capital-gains-tax", tags=["13 Portfolio & Tax Tools"])
+@app.post("/tools/capital-gains-tax", tags=["14 Portfolio & Tax Tools"])
 def tools_capital_gains_tax(body: s.CapitalGainsTaxIn):
     return _wrap(calc.estimate_capital_gains_tax, body.buy_price, body.sell_price, body.qty,
                  body.buy_date, body.sell_date, body.other_ltcg)
 
 
-@app.post("/tools/52-week-range", tags=["13 Portfolio & Tax Tools"])
+@app.post("/tools/52-week-range", tags=["14 Portfolio & Tax Tools"])
 def tools_52_week_range(body: s.Range52WIn):
     return _wrap(calc.check_52_week_range, body.current, body.high, body.low)
 
 
 # ---------------------------------------------------------------------------
-# 17 ML price prediction (next-day close, scikit-learn)
+# 15 ML price prediction (next-day close, scikit-learn)
 # ---------------------------------------------------------------------------
-@app.get("/ml/predict", tags=["17 ML Price Prediction"])
+@app.get("/ml/predict", tags=["15 ML Price Prediction"])
 def ml_predict(symbol: str = Query(..., min_length=1),
                period: str = Query("2y", pattern="^(1y|2y|5y)$")):
     try:
@@ -277,43 +277,43 @@ def ml_predict(symbol: str = Query(..., min_length=1),
 
 
 # ---------------------------------------------------------------------------
-# 18 Income tax: old vs new regime
+# 04 Income tax: old vs new regime
 # ---------------------------------------------------------------------------
-@app.post("/tax/income", tags=["18 Income Tax"])
+@app.post("/tax/income", tags=["04 Income Tax"])
 def tax_income(body: s.IncomeTaxIn):
     return _wrap(planning.calc_income_tax, **body.model_dump())
 
 
 # ---------------------------------------------------------------------------
-# 19 Loan EMI calculator
+# 05 Loan EMI calculator
 # ---------------------------------------------------------------------------
-@app.post("/loans/emi", tags=["19 Loan EMI"])
+@app.post("/loans/emi", tags=["05 Loan EMI"])
 def loans_emi(body: s.LoanEmiIn):
     return _wrap(planning.calc_loan_emi, **body.model_dump())
 
 
 # ---------------------------------------------------------------------------
-# 20 Budget planner (50/30/20)
+# 03 Budget planner (50/30/20)
 # ---------------------------------------------------------------------------
-@app.post("/budget", tags=["20 Budget Planner"])
+@app.post("/budget", tags=["03 Budget Planner"])
 def budget(body: s.BudgetIn):
     return _wrap(planning.calc_budget, body.income, [i.model_dump() for i in body.items])
 
 
 # ---------------------------------------------------------------------------
-# 21 Mutual funds & SIP tracker (AMFI NAV data, no API key)
+# 12 Mutual funds & SIP tracker (AMFI NAV data, no API key)
 # ---------------------------------------------------------------------------
-@app.get("/mf/search", tags=["21 Mutual Funds"])
+@app.get("/mf/search", tags=["12 Mutual Funds"])
 def mf_search(q: str = Query(..., min_length=2), limit: int = Query(15, ge=1, le=50)):
     return {"query": q, "results": _market(mf.search_funds, q, limit)}
 
 
-@app.get("/mf/nav", tags=["21 Mutual Funds"])
+@app.get("/mf/nav", tags=["12 Mutual Funds"])
 def mf_nav(code: int, years: int = Query(5, ge=0, le=40)):
     return _market(mf.fund_nav_chart, code, years)
 
 
-@app.post("/mf/sip", tags=["21 Mutual Funds"])
+@app.post("/mf/sip", tags=["12 Mutual Funds"])
 def mf_sip(body: s.MfSipIn):
     try:
         return mf.sip_returns(body.code, body.monthly, body.start, body.end)
@@ -324,36 +324,36 @@ def mf_sip(body: s.MfSipIn):
 
 
 # ---------------------------------------------------------------------------
-# 22 Portfolio tracker (live prices)
+# 11 Portfolio tracker (live prices)
 # ---------------------------------------------------------------------------
-@app.post("/tracker/value", tags=["22 Portfolio Tracker"])
+@app.post("/tracker/value", tags=["11 Portfolio Tracker"])
 def tracker_value(body: s.TrackerIn):
     return _wrap(tracker.value_holdings, [h.model_dump() for h in body.holdings])
 
 
 # ---------------------------------------------------------------------------
-# 23 Retirement & FIRE
+# 07 Retirement & FIRE
 # ---------------------------------------------------------------------------
-@app.post("/goals/fire", tags=["23 Retirement & FIRE"])
+@app.post("/goals/fire", tags=["07 Retirement & FIRE"])
 def goals_fire(body: s.FireIn):
     return _wrap(planning.calc_fire, **body.model_dump())
 
 
 # ---------------------------------------------------------------------------
-# 24 Currency converter & stock comparison
+# 09 Currency converter & stock comparison
 # ---------------------------------------------------------------------------
-@app.get("/market/currencies", tags=["24 Currency & Compare"])
+@app.get("/market/currencies", tags=["09 Currency & Compare"])
 def market_currencies():
     return {"currencies": market.CURRENCIES}
 
 
-@app.get("/market/fx", tags=["24 Currency & Compare"])
+@app.get("/market/fx", tags=["09 Currency & Compare"])
 def market_fx(base: str = Query("USD", pattern="^[A-Za-z]{3}$"), quote: str = Query("INR", pattern="^[A-Za-z]{3}$"),
               amount: float = 1, period: str = Query("3mo", pattern="^(1mo|3mo|6mo|1y|5y)$")):
     return _market(market.convert_currency, amount, base, quote, period)
 
 
-@app.get("/market/compare", tags=["24 Currency & Compare"])
+@app.get("/market/compare", tags=["09 Currency & Compare"])
 def market_compare(a: str = Query(..., min_length=1), b: str = Query(..., min_length=1),
                    period: str = Query("1y", pattern="^(1mo|3mo|6mo|1y|2y|5y)$")):
     return _market(analysis.compare_stocks, a, b, period)
@@ -483,7 +483,7 @@ def api_status():
             "email_delivery": alerts.email_configured()}
 
 
-@app.get("/about", tags=["16 About"])
+@app.get("/about", tags=["24 About"])
 def about():
     tag_counts = {}
     for route in app.routes:

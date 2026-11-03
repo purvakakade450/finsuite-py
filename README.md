@@ -13,20 +13,32 @@ Full project report: [docs/FinSuite_Project_Report.pdf](docs/FinSuite_Project_Re
 24 tools in one console, grouped into four menus (Personal finance, Markets &
 investing, Business & credit, Learn & info), each backed by a documented REST endpoint:
 
-| # | Module | # | Module |
-|---|---|---|---|
-| 01 | Ratio calculators (ROE, ROA, debt ratio, health) | 13 | SIP vs lump sum, capital gains tax (India), 52-week range |
-| 02 | Personal finance report (PDF / Excel download) | 14 | Watchlist & price alerts: saved, background checks, email |
-| 03 | Finance assistant (snapshot + term lookup) | 15 | Data sources |
-| 04 | Loan insight generator (PDF / Excel download) | 16 | About |
-| 05 | Credit score & customer risk | 17 | **ML price prediction**, with news mood next to the forecast |
-| 06 | Investment BUY / HOLD / AVOID | 18 | Income tax: old vs new regime (FY 2025-26) |
-| 07 | Company performance score | 19 | Loan EMI, repayment table, prepayment savings |
-| 08 | Multi-company portfolio screener | 20 | Budget planner (50/30/20 rule) |
-| 09 | Goal & retirement planner, emergency fund | 21 | Mutual fund search, NAV chart, SIP returns (XIRR) |
-| 10 | Knowledge centre (95 plain-language entries) | 22 | Portfolio tracker at live prices (P&L in INR) |
-| 11 | **Live stock market**: quotes, chart with SMA/EMA/Bollinger/RSI, OHLC history, news with sentiment | 23 | Retirement & FIRE planner |
-| | | 24 | Currency converter and two-stock comparison |
+| Menu | # | Tool |
+|---|---|---|
+| Personal finance | 01 | Personal finance report |
+|  | 02 | Finance assistant (snapshot + term lookup) |
+|  | 03 | Budget planner (50/30/20 rule) |
+|  | 04 | Income tax: old vs new regime (FY 2025-26) |
+|  | 05 | Loan EMI, repayment table, prepayment savings |
+|  | 06 | Goal planner, emergency fund |
+|  | 07 | Retirement & FIRE planner |
+| Markets & investing | 08 | Live stock market: quotes, chart with SMA/EMA/Bollinger/RSI, OHLC history, news with sentiment |
+|  | 09 | Currency converter and two-stock comparison |
+|  | 10 | Watchlist & price alerts (saved, background checks, email) |
+|  | 11 | Portfolio tracker at live prices (P&L in INR) |
+|  | 12 | Mutual fund search, NAV chart, SIP returns (XIRR) |
+|  | 13 | What-if growth, target / stop-loss planner |
+|  | 14 | SIP vs lump sum, capital gains tax (India), 52-week range |
+|  | 15 | ML price prediction, with news mood next to the forecast |
+| Business & credit | 16 | Ratio calculators (ROE, ROA, debt ratio, health) |
+|  | 17 | Loan insight generator |
+|  | 18 | Credit score & customer risk |
+|  | 19 | Investment BUY / HOLD / AVOID |
+|  | 20 | Company performance score |
+|  | 21 | Multi-company portfolio screener |
+| Learn & info | 22 | Knowledge centre (95 plain-language entries) |
+|  | 23 | Data sources |
+|  | 24 | About |
 
 Across the app: dark mode, a phone-friendly menu, ⓘ icons that open the
 Knowledge Centre explanation of a term, and PDF / Excel downloads for the
