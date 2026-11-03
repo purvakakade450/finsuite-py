@@ -1,5 +1,5 @@
 const CHARTS = {};
-const PALETTE = ["#0E7C7B","#B9840E","#7A4CC2","#2C6FB0","#C43D3D","#1F9D6B","#D9622B","#8A94A8","#C2477A","#4E9F3D"];
+const PALETTE = ["#1F3A68","#9C7A3C","#5B7DB1","#2E7D4F","#A63232","#7A6A9E","#C49A52","#8A94A8","#3F6E78","#B5654A"];
 function themeColors(){
   const cs = getComputedStyle(document.documentElement);
   return { muted: cs.getPropertyValue("--muted").trim() || "#64708A", grid: cs.getPropertyValue("--border").trim() || "#E3E8F0",
@@ -13,7 +13,7 @@ function makeChart(canvasId, key, config){
 }
 function barChart(canvasId, key, labels, data, opts={}){
   const t = themeColors();
-  const datasets = opts.datasets || [{ data, backgroundColor: opts.color||"#0E7C7B", borderRadius:5, maxBarThickness:50 }];
+  const datasets = opts.datasets || [{ data, backgroundColor: opts.color||"#1F3A68", borderRadius:5, maxBarThickness:50 }];
   return makeChart(canvasId, key, {
     type:"bar",
     data:{ labels, datasets },
@@ -405,7 +405,7 @@ async function calcGoalPlan(){
       <div class="stat">Projected gain<b>₹${Math.round(r.gain).toLocaleString()}</b></div>`;
     document.getElementById("goalChartWrap").style.display = "block";
     lineChart("goalChart","goal", r.schedule.map(y=>`Yr ${y.year}`), [
-      { label:"Projected corpus", data:r.schedule.map(y=>y.projected_corpus), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.12)", fill:true, tension:.25, pointRadius:2 },
+      { label:"Projected corpus", data:r.schedule.map(y=>y.projected_corpus), borderColor:"#1F3A68", backgroundColor:"rgba(31,58,104,.12)", fill:true, tension:.25, pointRadius:2 },
       { label:"Inflation-adjusted target", data:r.schedule.map(y=>y.target), borderColor:"#B9840E", borderDash:[6,4], pointRadius:0 },
     ]);
     document.getElementById("goalInsightText").textContent = r.insight;
@@ -809,7 +809,7 @@ refreshAlertSymbolSelect();
     const r = await api("GET","/about");
     document.getElementById("aboutOut").innerHTML = `
       <div class="result-box">${r.about_text}</div>
-      <div class="card" style="margin-top:12px;background:rgba(14,124,123,.06);">
+      <div class="card" style="margin-top:12px;background:rgba(31,58,104,.06);">
         <h3 style="margin-top:0;">Why this matters</h3>
         <p style="margin:0;">${r.why_it_matters}</p>
       </div>
@@ -1005,7 +1005,7 @@ async function runPrediction(){
     document.getElementById("mlVerdict").style.display = "block";
     document.getElementById("mlChartBox").hidden = false;
     lineChart("mlChart","ml", d.test.dates, [
-      { label:"Actual close", data:d.test.actual, borderColor:"#0E7C7B", borderWidth:2, pointRadius:0, tension:.1 },
+      { label:"Actual close", data:d.test.actual, borderColor:"#1F3A68", borderWidth:2, pointRadius:0, tension:.1 },
       { label:"Linear Regression", data:d.test.linear, borderColor:"#B9840E", borderWidth:1.5, pointRadius:0, tension:.1 },
       { label:"Random Forest", data:d.test.random_forest, borderColor:"#7A4CC2", borderWidth:1.5, borderDash:[5,3], pointRadius:0, tension:.1 },
     ]);
@@ -1193,12 +1193,12 @@ async function exportPDF(spec){
   const doc = new window.jspdf.jsPDF({unit:"pt", format:"a4"});
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 40;
   let y = M;
-  doc.setFillColor(19,34,74); doc.rect(0,0,W,56,"F");
+  doc.setFillColor(15,34,64); doc.rect(0,0,W,56,"F"); doc.setFillColor(156,122,60); doc.rect(0,56,W,3,"F");
   doc.setTextColor(255); doc.setFontSize(16); doc.text("FinSuite", M, 35);
   doc.setFontSize(10); doc.text(new Date().toLocaleString("en-IN"), W-M, 35, {align:"right"});
   doc.setTextColor(20); doc.setFontSize(15); y = 84; doc.text(pdfText(spec.title), M, y); y += 16;
   const table = (head, body) => { doc.autoTable({ startY:y, head:[head.map(pdfText)], body: body.map(r=>r.map(fmtCell)), margin:{left:M, right:M},
-    styles:{fontSize:8.5, cellPadding:4}, headStyles:{fillColor:[14,124,123]}, theme:"grid" }); y = doc.lastAutoTable.finalY + 14; };
+    styles:{fontSize:8.5, cellPadding:4}, headStyles:{fillColor:[31,58,104]}, theme:"grid" }); y = doc.lastAutoTable.finalY + 14; };
   const heading = t => { if(y > H-80){ doc.addPage(); y = M; } doc.setFontSize(11.5); doc.setTextColor(19,34,74); doc.text(pdfText(t), M, y+4); doc.setTextColor(20); y += 12; };
   if(spec.meta && spec.meta.length){ heading("Inputs"); table(["Input","Value"], spec.meta); }
   for(const sec of spec.sections){ if(sec.excelOnly) continue; heading(sec.name); table(sec.head, sec.rows); }
@@ -1333,7 +1333,7 @@ async function drawHistoryChart(){
   if(!HISTORY) return;
   const my = ++INDSEQ;
   const {rows, ticker} = HISTORY;
-  const closeSet = (labels, data)=>({ label:`${ticker} close`, data, borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.10)", fill:!indOn("bb"), tension:.15, pointRadius:0, borderWidth:2 });
+  const closeSet = (labels, data)=>({ label:`${ticker} close`, data, borderColor:"#1F3A68", backgroundColor:"rgba(31,58,104,.10)", fill:!indOn("bb"), tension:.15, pointRadius:0, borderWidth:2 });
   const any = ["sma20","sma50","ema20","bb","rsi"].some(indOn);
   if(!any){
     lineChart("historyChart","history", rows.map(r=>r.Date), [closeSet(null, rows.map(r=>r.Close))]);
@@ -1436,7 +1436,7 @@ async function calcIncomeTax(){
       <details><summary>Show slab-by-slab working</summary><div class="grid-2" style="margin-top:8px;"><div><div class="sub">New regime</div>${slabTable(n)}</div><div><div class="sub">Old regime</div>${slabTable(o)}</div></div></details>
       <div class="chart-box short"><canvas id="itChart"></canvas></div>
       <div class="insight-box"><span class="lbl">Insight</span>${escapeHtml(r.insight)}</div>`;
-    barChart("itChart","incometax", ["New regime","Old regime"], [Math.round(n.total_tax), Math.round(o.total_tax)], {color:["#0E7C7B","#B9840E"]});
+    barChart("itChart","incometax", ["New regime","Old regime"], [Math.round(n.total_tax), Math.round(o.total_tax)], {color:["#1F3A68","#B9840E"]});
     LAST.incometax = { inputs: readInputs({"Annual gross income (Rs)":"itIncome", "Age group":"itAge", "Salaried (1 = yes)":"itSalaried", "80C (Rs)":"it80c", "80D (Rs)":"it80d",
       "NPS 80CCD(1B) (Rs)":"itNps", "Home loan interest (Rs)":"itHome", "HRA exemption (Rs)":"itHra", "Other deductions (Rs)":"itOther"}), r };
     showExport("incometax");
@@ -1464,7 +1464,7 @@ async function calcEmi(){
     setHidden(["emiStats","emiInsight","emiChartBox","emiTableWrap"], false);
     const years = r.yearly.map(y=>`Yr ${y.year}`);
     const sets = [{ label:"Balance without prepayment", data:r.yearly.map(y=>Math.round(y.balance)), borderColor:"#B9840E", pointRadius:2, tension:.2 }];
-    if(p) sets.push({ label:"Balance with prepayment", data:r.yearly.map((_,i)=>p.yearly[i] ? Math.round(p.yearly[i].balance) : 0), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.12)", fill:true, pointRadius:2, tension:.2 });
+    if(p) sets.push({ label:"Balance with prepayment", data:r.yearly.map((_,i)=>p.yearly[i] ? Math.round(p.yearly[i].balance) : 0), borderColor:"#1F3A68", backgroundColor:"rgba(31,58,104,.12)", fill:true, pointRadius:2, tension:.2 });
     lineChart("emiChart","emi", years, sets, {y:{beginAtZero:true}});
     document.getElementById("emiPlan").hidden = !p;
     LAST.emi = { inputs: readInputs({"Loan amount (Rs)":"emiPrincipal", "Interest rate (%/yr)":"emiRate", "Tenure (years)":"emiYears",
@@ -1549,7 +1549,7 @@ async function selectFund(i){
     if(MF_FUND.code !== d.meta.scheme_code && String(MF_FUND.code) !== String(d.meta.scheme_code)) return;
     const ret = d.fund_returns;
     document.getElementById("mfReturns").innerHTML = ["1y","3y","5y"].map(k=>`<div class="stat">${k.replace("y"," year")} return (a year)<b class="${ret[k]==null?"":ret[k]>=0?"badge-good":"badge-warn"}">${ret[k]==null?"—":pct(ret[k],1)}</b></div>`).join("");
-    lineChart("mfNavChart","mfnav", d.dates, [{ label:"NAV (₹)", data:d.nav, borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.10)", fill:true, pointRadius:0, borderWidth:2, tension:.1 }]);
+    lineChart("mfNavChart","mfnav", d.dates, [{ label:"NAV (₹)", data:d.nav, borderColor:"#1F3A68", backgroundColor:"rgba(31,58,104,.10)", fill:true, pointRadius:0, borderWidth:2, tension:.1 }]);
     document.getElementById("mfFundCard").scrollIntoView({behavior:"smooth", block:"start"});
   }catch(e){ document.getElementById("mfReturns").innerHTML = `<div class="stat">Could not load history: ${escapeHtml(e.message)}</div>`; }
 }
@@ -1566,7 +1566,7 @@ async function calcFundSip(){
       <div class="stat">XIRR (a year)<b>${r.xirr==null?"—":pct(r.xirr,1)}</b></div>
       <div class="stat">Same money as a lump sum<b>${rupees(r.lump_sum_value)}</b></div>`;
     lineChart("mfSipChart","mfsip", r.series.map(x=>x.date), [
-      { label:"Value of your SIP", data:r.series.map(x=>x.value), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.12)", fill:true, pointRadius:0, borderWidth:2, tension:.15 },
+      { label:"Value of your SIP", data:r.series.map(x=>x.value), borderColor:"#1F3A68", backgroundColor:"rgba(31,58,104,.12)", fill:true, pointRadius:0, borderWidth:2, tension:.15 },
       { label:"Money put in", data:r.series.map(x=>x.invested), borderColor:"#B9840E", borderDash:[6,4], pointRadius:0, borderWidth:1.5 },
     ]);
     document.getElementById("mfSipInsightText").textContent = r.insight;
@@ -1665,7 +1665,7 @@ async function calcFire(){
       <div class="stat">Financially independent at<b>${r.fi_age==null?"not before 100":"age "+r.fi_age.toFixed(1)}</b></div>
       <div class="stat">Money lasts until<b class="${r.money_runs_out_age?"badge-warn":"badge-good"}">${r.money_runs_out_age?"age "+r.money_runs_out_age:"beyond age "+val("fiLife")}</b></div>`;
     lineChart("fiChart","fire", r.schedule.map(x=>x.age), [
-      { label:"Your money (current plan)", data:r.schedule.map(x=>x.corpus), borderColor:"#0E7C7B", backgroundColor:"rgba(14,124,123,.12)", fill:true, pointRadius:0, tension:.2 },
+      { label:"Your money (current plan)", data:r.schedule.map(x=>x.corpus), borderColor:"#1F3A68", backgroundColor:"rgba(31,58,104,.12)", fill:true, pointRadius:0, tension:.2 },
       { label:"Needed at retirement", data:r.schedule.map(x=>x.age<=val("fiRetire")?Math.round(r.corpus_needed):null), borderColor:"#B9840E", borderDash:[6,4], pointRadius:0 },
     ], {y:{beginAtZero:true}});
     CHARTS.fire.options.scales.x.title = {display:true, text:"Age", color:themeColors().muted}; CHARTS.fire.update();
@@ -1718,7 +1718,7 @@ async function compareStocks(){
     status.hidden = true;
     document.getElementById("cmpChartBox").hidden = false;
     lineChart("cmpChart","cmp", r.dates, [
-      { label:`${r.a.name} (${r.a.symbol})`, data:r.a.rebased, borderColor:"#0E7C7B", pointRadius:0, borderWidth:2, tension:.1 },
+      { label:`${r.a.name} (${r.a.symbol})`, data:r.a.rebased, borderColor:"#1F3A68", pointRadius:0, borderWidth:2, tension:.1 },
       { label:`${r.b.name} (${r.b.symbol})`, data:r.b.rebased, borderColor:"#B9840E", pointRadius:0, borderWidth:2, tension:.1 },
     ]);
     const cls = v => v>=0 ? "badge-good" : "badge-warn";
