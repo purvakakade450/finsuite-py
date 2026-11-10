@@ -7,6 +7,12 @@ REPO="${REPO:-https://github.com/purvakakade450/finsuite-py.git}"
 APP_DIR=/opt/finsuite
 DOMAIN="${DOMAIN:-}"
 
+# Small servers (about 1 GB RAM) need swap for pandas and scikit-learn
+if [ "$(swapon --show | wc -l)" -eq 0 ] && [ "$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)" -lt 2500 ]; then
+  fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
 apt-get update
 apt-get install -y python3 python3-venv python3-pip git nginx ufw
 
