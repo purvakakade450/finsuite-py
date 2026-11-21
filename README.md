@@ -45,11 +45,26 @@ Knowledge Centre explanation of a term, and PDF / Excel downloads for the
 finance report, goal plan, loan table, income tax, EMI schedule, budget,
 portfolio, retirement plan and SIP results.
 
-**Accounts (optional).** Creating an account saves the watchlist, portfolio and
-price alerts on the server (SQLite, passwords stored as salted PBKDF2 hashes).
-Without an account they are kept in the browser. For logged-in users a
-background worker checks alerts every 5 minutes and emails them if SMTP is
-configured (see `deploy/HOSTINGER.md`).
+**AI Assistant.** With `ANTHROPIC_API_KEY` set, the assistant is a Claude model
+that calls 16 FinSuite functions as tools (live quotes, indicators, tax, EMI,
+retirement, budget, funds, portfolio, forecast ...), so its numbers come from
+tested code. It answers in English, Hindi or Marathi, and costs are bounded by
+per-minute, per-person and per-day limits (see Settings). Without a key it
+answers from the Knowledge Center.
+
+**Accounts (optional).** Creating an account saves the watchlist, portfolio,
+chat history and price alerts on the server (SQLite, passwords stored as salted
+PBKDF2 hashes), with password reset and email confirmation by email. Without an
+account they are kept in the browser. For logged-in users a background worker
+checks alerts every 5 minutes and sends them by email, browser push notification
+and Telegram, whichever the user has set up (see `deploy/AWS.md`).
+
+**Installable app.** `manifest.webmanifest` and a service worker make FinSuite
+installable and let it open offline; push notifications need an HTTPS address.
+
+**Tests.** `python -m pytest` runs 122 tests (calculators, market data, accounts,
+alerts, API, AI tools and limits, ML, and the bank-statement importer under Node).
+They need no internet and run on every push (`.github/workflows/tests.yml`).
 
 Live data needs **no API key**: quotes, history, exchange rates and company
 search come from Yahoo Finance via `yfinance`, news from Google News RSS, and
@@ -84,6 +99,15 @@ python -m app.market TCS
 | `ALERT_INTERVAL` | Seconds between background alert checks (default 300) |
 | `FINSUITE_ALERT_WORKER=0` | Turn the background worker off |
 | `CRON_SECRET` | Enables `POST /alerts/run-check` for hosts without a background worker |
+| `TELEGRAM_BOT_TOKEN` | Turns on Telegram alerts (create a bot with @BotFather) |
+| `AI_RATE_PER_MIN`, `AI_PER_IP_DAILY`, `AI_PER_USER_DAILY`, `AI_DAILY_LIMIT`, `AI_MAX_TOKENS` | AI limits: per minute, per guest, per user, whole site per day (defaults 6, 30, 100, 500) and tokens per answer (8000) |
+| `RATE_GENERAL_PER_MIN`, `RATE_ML_PER_MIN`, `RATE_LOGIN_PER_MIN`, ... | Other rate limits (see `app/limits.py`) |
+| `CORS_ORIGINS` | Websites allowed to call the API from a browser |
+| `PUBLIC_URL` | Address used in emailed links (reset, confirm) |
+| `ADMIN_EMAIL` | Receives the uptime alert from `deploy/healthcheck.py` |
+| `FINSUITE_TRANSLATE_MODEL` | Model for the Hindi and Marathi Knowledge Center (default `claude-sonnet-5-5`) |
+
+Copy `.env.example` to `.env` to set these locally (the file is not committed).
 
 On Vercel the project folder is read-only and `/tmp` is wiped, so accounts there
 are temporary (the app says so in the login box) and the background worker does
@@ -117,7 +141,8 @@ backend/services/
 frontend/
   index.html, style.css, js/ (one script per tool), sw.js, manifest.webmanifest, icons/
 docs/
-  FinSuite_Project_Report.docx / .pdf
+  FinSuite_Technical_Documentation.pdf   (version 2.0; rebuild with docs/build_technical_documentation.py)
+  FinSuite_Project_Report.docx / .pdf    (Chapter 9 and Appendix D describe version 2.0)
 ```
 
 ## Notes

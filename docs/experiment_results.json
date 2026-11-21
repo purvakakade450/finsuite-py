@@ -1,0 +1,286 @@
+{
+ "RELIANCE.NS": {
+  "name": "Reliance Industries",
+  "days": 1237,
+  "usable": 1207,
+  "train": 966,
+  "test": 241,
+  "metrics": {
+   "naive": {
+    "mae": 14.23,
+    "rmse": 20.15,
+    "mape": 1.06
+   },
+   "linear": {
+    "mae": 14.08,
+    "rmse": 19.95,
+    "mape": 1.05
+   },
+   "ridge": {
+    "mae": 14.71,
+    "rmse": 20.26,
+    "mape": 1.1
+   },
+   "random_forest": {
+    "mae": 14.52,
+    "rmse": 20.15,
+    "mape": 1.08
+   },
+   "gradient_boosting": {
+    "mae": 15.66,
+    "rmse": 21.13,
+    "mape": 1.16
+   }
+  },
+  "direction": {
+   "linear": 55.9,
+   "ridge": 51.3,
+   "random_forest": 54.2,
+   "gradient_boosting": 50.0
+  },
+  "best": "linear",
+  "beats": true,
+  "walk": {
+   "folds": 5,
+   "days_per_fold": 120,
+   "naive_mae": 13.44,
+   "models": {
+    "linear": {
+     "mae": 13.41,
+     "folds_beating_naive": 4,
+     "direction_accuracy": 53.3
+    },
+    "ridge": {
+     "mae": 14.23,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 49.2
+    },
+    "random_forest": {
+     "mae": 16.56,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 51.8
+    },
+    "gradient_boosting": {
+     "mae": 16.47,
+     "folds_beating_naive": 1,
+     "direction_accuracy": 54.2
+    }
+   }
+  },
+  "currency": "INR",
+  "seconds": 6.4
+ },
+ "TCS.NS": {
+  "name": "Tata Consultancy Services",
+  "days": 1237,
+  "usable": 1207,
+  "train": 966,
+  "test": 241,
+  "metrics": {
+   "naive": {
+    "mae": 33.39,
+    "rmse": 46.78,
+    "mape": 1.37
+   },
+   "linear": {
+    "mae": 34.92,
+    "rmse": 47.99,
+    "mape": 1.44
+   },
+   "ridge": {
+    "mae": 37.65,
+    "rmse": 50.96,
+    "mape": 1.56
+   },
+   "random_forest": {
+    "mae": 38.87,
+    "rmse": 51.45,
+    "mape": 1.61
+   },
+   "gradient_boosting": {
+    "mae": 40.36,
+    "rmse": 54.21,
+    "mape": 1.68
+   }
+  },
+  "direction": {
+   "linear": 44.6,
+   "ridge": 49.2,
+   "random_forest": 44.2,
+   "gradient_boosting": 51.2
+  },
+  "best": "linear",
+  "beats": false,
+  "walk": {
+   "folds": 5,
+   "days_per_fold": 120,
+   "naive_mae": 32.31,
+   "models": {
+    "linear": {
+     "mae": 32.98,
+     "folds_beating_naive": 1,
+     "direction_accuracy": 48.5
+    },
+    "ridge": {
+     "mae": 35.81,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 51.2
+    },
+    "random_forest": {
+     "mae": 42.13,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 47.1
+    },
+    "gradient_boosting": {
+     "mae": 40.51,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 48.8
+    }
+   }
+  },
+  "currency": "INR",
+  "seconds": 3.2
+ },
+ "^NSEI": {
+  "name": "NIFTY 50 index",
+  "days": 1236,
+  "usable": 1206,
+  "train": 965,
+  "test": 241,
+  "metrics": {
+   "naive": {
+    "mae": 164.97,
+    "rmse": 218.02,
+    "mape": 0.69
+   },
+   "linear": {
+    "mae": 163.9,
+    "rmse": 217.64,
+    "mape": 0.68
+   },
+   "ridge": {
+    "mae": 179.04,
+    "rmse": 250.63,
+    "mape": 0.74
+   },
+   "random_forest": {
+    "mae": 162.75,
+    "rmse": 217.64,
+    "mape": 0.68
+   },
+   "gradient_boosting": {
+    "mae": 168.38,
+    "rmse": 224.82,
+    "mape": 0.7
+   }
+  },
+  "direction": {
+   "linear": 51.9,
+   "ridge": 48.1,
+   "random_forest": 51.5,
+   "gradient_boosting": 48.5
+  },
+  "best": "random_forest",
+  "beats": true,
+  "walk": {
+   "folds": 5,
+   "days_per_fold": 120,
+   "naive_mae": 147.47,
+   "models": {
+    "linear": {
+     "mae": 148.14,
+     "folds_beating_naive": 3,
+     "direction_accuracy": 52.6
+    },
+    "ridge": {
+     "mae": 165.64,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 46.4
+    },
+    "random_forest": {
+     "mae": 158.06,
+     "folds_beating_naive": 1,
+     "direction_accuracy": 51.2
+    },
+    "gradient_boosting": {
+     "mae": 164.51,
+     "folds_beating_naive": 1,
+     "direction_accuracy": 51.4
+    }
+   }
+  },
+  "currency": "INR",
+  "seconds": 3.5
+ },
+ "AAPL": {
+  "name": "Apple Inc.",
+  "days": 1255,
+  "usable": 1225,
+  "train": 980,
+  "test": 245,
+  "metrics": {
+   "naive": {
+    "mae": 3.38,
+    "rmse": 4.72,
+    "mape": 1.14
+   },
+   "linear": {
+    "mae": 3.39,
+    "rmse": 4.72,
+    "mape": 1.15
+   },
+   "ridge": {
+    "mae": 3.68,
+    "rmse": 4.97,
+    "mape": 1.24
+   },
+   "random_forest": {
+    "mae": 3.47,
+    "rmse": 4.75,
+    "mape": 1.17
+   },
+   "gradient_boosting": {
+    "mae": 3.55,
+    "rmse": 4.84,
+    "mape": 1.21
+   }
+  },
+  "direction": {
+   "linear": 46.9,
+   "ridge": 51.4,
+   "random_forest": 49.4,
+   "gradient_boosting": 50.2
+  },
+  "best": "linear",
+  "beats": false,
+  "walk": {
+   "folds": 5,
+   "days_per_fold": 122,
+   "naive_mae": 2.96,
+   "models": {
+    "linear": {
+     "mae": 3.08,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 45.4
+    },
+    "ridge": {
+     "mae": 3.43,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 49.0
+    },
+    "random_forest": {
+     "mae": 3.37,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 46.6
+    },
+    "gradient_boosting": {
+     "mae": 3.39,
+     "folds_beating_naive": 0,
+     "direction_accuracy": 46.7
+    }
+   }
+  },
+  "currency": "USD",
+  "seconds": 3.6
+ }
+}

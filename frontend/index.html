@@ -495,7 +495,7 @@
       <div class="result-box"><b>Google News</b><br>Latest news headlines from the last 7 days for the selected company or the overall market.<br><span class="muted">Used in: Stock Market (with headline sentiment), ML Prediction.</span></div>
       <div class="result-box"><b>Your own inputs</b><br>All calculators and planners work only on the numbers you enter. No outside data is used.<br><span class="muted">Used in: Ratios, Finance Report, Assistant, Loans, Credit and Risk, Investment Call, Company Performance, Portfolio Dashboard, Goals, Growth and Target, Portfolio and Tax, Income Tax, Loan EMI, Budget Planner, Retirement and FIRE.</span></div>
       <div class="result-box"><b>AI model (Anthropic Claude)</b><br>Writes the AI Assistant's answers. Your question, the conversation so far and, to personalise answers, your saved watchlist and portfolio symbols are sent to the model; the numbers it quotes come from FinSuite's own calculators and the data sources above.<br><span class="muted">Used in: AI Assistant (when an API key is set on the server).</span></div>
-      <div class="result-box"><b>Your account</b><br>If you create an account, your watchlist, portfolio holdings and price alerts are saved on the FinSuite server so they follow you to any device. Passwords are stored only as a salted hash.<br><span class="muted">Used in: Watchlist &amp; Alerts, Portfolio Tracker.</span></div>
+      <div class="result-box"><b>Your account</b><br>If you create an account, your watchlist, portfolio holdings, chat history and price alerts are saved on the FinSuite server so they follow you to any device. If you turn on Telegram or push alerts, the server also keeps your Telegram chat number or your browser's push address. You can delete the account and all of this at any time. Passwords are stored only as a salted hash.<br><span class="muted">Used in: Watchlist &amp; Alerts, Portfolio Tracker.</span></div>
       <div class="sub" style="margin-top:18px;">Live status</div>
       <div id="liveStatus" class="status-grid" aria-live="polite">Checking the data sources…</div>
       <div class="btn-row"><button class="btn secondary sm" onclick="loadLiveStatus(true)">Check again</button></div>
@@ -531,7 +531,7 @@
   <section id="panel-incometax" class="panel">
     <div class="card">
       <h2>Income Tax: Old vs New Regime<span class="info" data-term="Tax regime" tabindex="0" role="button" aria-label="Explain Tax regime"></span></h2>
-      <p class="muted">India, FY 2025-26 (AY 2026-27). Enter your yearly income; FinSuite works out tax under both regimes and shows which saves more. Simplified: special-rate income such as capital gains is not included.</p>
+      <p class="muted">India, FY 2025-26 (AY 2026-27). Enter your yearly income; FinSuite works out tax under both regimes and shows which saves more. Simplified: you can add share-market gains below; other special-rate income is not included.</p>
       <div class="row">
         <div class="field"><label>Annual gross income (₹)</label><input id="itIncome" type="number" value="1800000"></div>
         <div class="field"><label>Age</label><select id="itAge"><option value="below60">Below 60</option><option value="60to79">60 to 79</option><option value="80plus">80 and above</option></select></div>
