@@ -96,6 +96,8 @@ def _cached(key: str, ttl: int, fetch):
         value = fetch()
     except Exception:
         if hit:                      # serve the last good value if the live call fails
+            if isinstance(hit[1], dict):
+                return {**hit[1], "stale": True, "staleSeconds": int(now - hit[0])}
             return hit[1]
         raise
     with _cache_lock:

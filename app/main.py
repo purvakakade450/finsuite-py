@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 def _load_env_file(path: Path) -> None:
     """Read KEY=VALUE lines from a local .env (e.g. SMTP settings) without
     overriding variables that are already set. The file is not committed."""
-    if not path.is_file():
+    if os.environ.get("FINSUITE_NO_ENV_FILE") or not path.is_file():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -26,15 +26,20 @@ def _load_env_file(path: Path) -> None:
 
 _load_env_file(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+import re
+from datetime import date
+
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from starlette.middleware.gzip import GZipMiddleware
 
 from app import calculators as calc
 from . import schemas as s
 from . import market
-from . import ai_assistant, analysis, alerts, mf, planning, store, tracker
+from . import ai_assistant, analysis, alerts, limits, mf, planning, store, tracker
+from . import health as healthcheck
 from .glossary import GLOSSARY
 
 
@@ -53,20 +58,46 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
-)
+# Only FinSuite's own sites may call the API from a browser. Override with
+# CORS_ORIGINS="https://a.example,https://b.example" (or "*" to allow all).
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get(
+    "CORS_ORIGINS",
+    "https://finsuite.co.in,https://www.finsuite.co.in,https://iitbfinsuite.vercel.app,"
+    "http://localhost:8000,http://127.0.0.1:8000").split(",") if o.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+
+
+class SelectiveGZip:
+    """Compress responses, except the AI chat stream, which must reach the browser piece by piece."""
+    def __init__(self, inner):
+        self.inner, self.gzip = inner, GZipMiddleware(inner, minimum_size=800)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].startswith("/assistant/ai-chat"):
+            return await self.inner(scope, receive, send)
+        return await self.gzip(scope, receive, send)
+
+
+app.add_middleware(SelectiveGZip)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @app.middleware("http")
-async def no_stale_frontend(request, call_next):
-    # Make the browser re-check the page/JS/CSS on every load (cheap 304 if
-    # unchanged), so code updates show up without a hard refresh.
+async def limits_and_caching(request, call_next):
+    path = request.url.path
+    is_static = path.startswith("/static/") or path == "/"
+    if not is_static and path not in ("/api/health", "/api/status"):
+        ok, retry = limits.check("all", limits.client_ip(request), limits.GENERAL_PER_MIN, 60)
+        if not ok:
+            return JSONResponse({"detail": f"Too many requests. Please wait {retry} seconds."}, status_code=429,
+                                headers={"Retry-After": str(retry)})
     response = await call_next(request)
-    if request.url.path == "/" or request.url.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "no-cache"
+    if path.startswith("/static/") and "v" in request.query_params:
+        # The page stamps every file with its modified time (?v=...), so a changed file has a new URL.
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif is_static:
+        response.headers["Cache-Control"] = "no-cache"      # re-check on every load (cheap 304)
     return response
 
 
@@ -125,12 +156,28 @@ def assistant_ai_status():
 
 
 @app.post("/assistant/ai-chat", tags=["02 AI Finance Assistant"])
-def assistant_ai_chat(body: s.AiChatIn):
+def assistant_ai_chat(body: s.AiChatIn, request: Request, authorization: str | None = Header(None)):
     """Conversational AI assistant that can use FinSuite's calculators and live data.
     Streams newline-delimited JSON events (see app/ai_assistant.py)."""
     msgs = [m.model_dump() for m in body.messages]
     if msgs[0]["role"] != "user" or msgs[-1]["role"] != "user":
         raise HTTPException(status_code=422, detail="The conversation must start and end with a user message.")
+    if sum(len(m["content"]) for m in msgs) > 40000:
+        raise HTTPException(status_code=413, detail="This conversation is too long. Start a new chat.")
+    if ai_assistant.enabled():       # every AI answer costs money, so cap use per minute, person and day
+        limits.enforce_ip(request, "ai", limits.AI_PER_MIN, 60,
+                          "You are asking very quickly. Please wait a few seconds and try again.")
+        today, user = date.today().isoformat(), optional_user(authorization)
+        who, cap = ((f"u{user['id']}", limits.AI_PER_USER_DAILY) if user
+                    else (f"ip{limits.client_ip(request)}", limits.AI_PER_IP_DAILY))
+        if limits.ENABLED:
+            ok, _ = store.counter_add(f"ai:{today}:{who}", cap, today)
+            if not ok:
+                raise HTTPException(status_code=429, detail=f"You have reached today's limit of {cap} AI questions."
+                                    + ("" if user else " Log in for a higher limit, or try again tomorrow."))
+            ok, _ = store.counter_add(f"ai:{today}:all", limits.AI_DAILY_LIMIT, today)
+            if not ok:
+                raise HTTPException(status_code=429, detail="The AI assistant has reached its limit for today. Please try again tomorrow.")
     return StreamingResponse(ai_assistant.chat_stream(msgs, body.context), media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
@@ -283,8 +330,10 @@ def tools_52_week_range(body: s.Range52WIn):
 # 15 ML price prediction (next-day close, scikit-learn)
 # ---------------------------------------------------------------------------
 @app.get("/ml/predict", tags=["15 ML Price Prediction"])
-def ml_predict(symbol: str = Query(..., min_length=1),
+def ml_predict(request: Request, symbol: str = Query(..., min_length=1),
                period: str = Query("2y", pattern="^(1y|2y|5y)$")):
+    limits.enforce_ip(request, "ml", limits.ML_PER_MIN, 60,
+                      "Training the price models takes a lot of computing. Please wait a minute and try again.")
     try:
         from . import predict
     except ImportError as e:
@@ -297,6 +346,7 @@ def ml_predict(symbol: str = Query(..., min_length=1),
 # ---------------------------------------------------------------------------
 @app.post("/tax/income", tags=["04 Income Tax"])
 def tax_income(body: s.IncomeTaxIn):
+    
     return _wrap(planning.calc_income_tax, **body.model_dump())
 
 
@@ -391,21 +441,102 @@ def current_user(authorization: str | None = Header(None)) -> dict:
     return user
 
 
+def optional_user(authorization: str | None) -> dict | None:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    return store.user_for_token(authorization[7:].strip())
+
+
+def _public_url(request: Request) -> str:
+    return (os.environ.get("PUBLIC_URL") or str(request.base_url)).rstrip("/")
+
+
+def _send_mail_later(background: BackgroundTasks, to: str, subject: str, body: str) -> None:
+    def job():
+        try:
+            alerts.send_email(to, subject, body)
+        except Exception as e:                      # a failed email must never break the request
+            alerts.log.warning("email to %s failed: %s", to, e)
+    background.add_task(job)
+
+
+def _verification_mail(background: BackgroundTasks, request: Request, user: dict) -> None:
+    token = store.create_token(user["id"], "verify", 3 * 24 * 3600)
+    _send_mail_later(background, user["email"], "Confirm your FinSuite email",
+                     f"Hi {user['name']},\n\nConfirm your email address so FinSuite can send you price alerts and "
+                     f"password resets:\n\n{_public_url(request)}/auth/verify?token={token}\n\n"
+                     "The link works for 3 days. If you did not create a FinSuite account, ignore this message.\n\nFinSuite")
+
+
 def _auth(fn, *args):
     try:
         return fn(*args)
-    except store.AuthError as e:
+    except store.AuthError as e:    
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/auth/register", tags=["25 Account"])
-def auth_register(body: s.RegisterIn):
-    return _auth(store.register, body.email, body.password, body.name)
+def auth_register(body: s.RegisterIn, request: Request, background: BackgroundTasks):
+    limits.enforce_ip(request, "register", limits.REGISTER_PER_HOUR, 3600,
+                      "Too many accounts were created from this connection. Please try again later.")
+    result = _auth(store.register, body.email, body.password, body.name)
+    if alerts.email_configured():
+        _verification_mail(background, request, result["user"])
+    return result
 
 
 @app.post("/auth/login", tags=["25 Account"])
-def auth_login(body: s.LoginIn):
+def auth_login(body: s.LoginIn, request: Request):
+    limits.enforce_ip(request, "login", limits.LOGIN_PER_MIN, 60, "Too many login attempts. Please wait a minute.")
+    limits.enforce("login-email", body.email.strip().lower(), limits.LOGIN_PER_EMAIL, 900,
+                   "Too many login attempts for this account. Please wait 15 minutes, or reset your password.")
     return _auth(store.login, body.email, body.password)
+
+
+@app.post("/auth/forgot", tags=["25 Account"])
+def auth_forgot(body: s.ForgotIn, request: Request, background: BackgroundTasks):
+    """Email a password reset link. The answer is the same whether or not the address has an account."""
+    if not alerts.email_configured():
+        raise HTTPException(status_code=503, detail="Password reset by email is not set up on this server yet.")
+    email = body.email.strip().lower()
+    limits.enforce_ip(request, "forgot", limits.EMAIL_SEND_PER_HOUR, 3600)
+    limits.enforce("forgot-email", email, limits.EMAIL_SEND_PER_HOUR, 3600)
+    user = store.get_user_by_email(email)
+    if user:
+        token = store.create_token(user["id"], "reset", 30 * 60)
+        _send_mail_later(background, email, "Reset your FinSuite password",
+                         f"Hi {user['name']},\n\nSomeone asked to reset the password of your FinSuite account. "
+                         f"Open this link within 30 minutes to choose a new one:\n\n{_public_url(request)}/#reset={token}\n\n"
+                         "If it was not you, ignore this message; your password stays the same.\n\nFinSuite")
+    return {"ok": True, "message": "If an account exists for that email, a reset link is on its way."}
+
+
+@app.post("/auth/reset", tags=["25 Account"])
+def auth_reset(body: s.ResetIn, request: Request):
+    limits.enforce_ip(request, "reset", limits.LOGIN_PER_MIN, 60)
+    user_id = store.consume_token(body.token, "reset")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired. Ask for a new one.")
+    _auth(store.set_password, user_id, body.password)
+    store.mark_verified(user_id)               # the link reached their inbox
+    return store.start_session(user_id)
+
+
+@app.post("/auth/verify/send", tags=["25 Account"])
+def auth_verify_send(request: Request, background: BackgroundTasks, user: dict = Depends(current_user)):
+    if not alerts.email_configured():
+        raise HTTPException(status_code=503, detail="Email sending is not set up on this server yet.")
+    limits.enforce("verify-email", user["email"], limits.EMAIL_SEND_PER_HOUR, 3600)
+    _verification_mail(background, request, user)
+    return {"ok": True}
+
+
+@app.get("/auth/verify", tags=["25 Account"])
+def auth_verify(token: str):
+    user_id = store.consume_token(token, "verify")
+    if user_id:
+        store.mark_verified(user_id)
+    return RedirectResponse(url="/#verified" if user_id else "/#verify-failed")
 
 
 @app.post("/auth/logout", tags=["25 Account"])
@@ -417,6 +548,13 @@ def auth_logout(authorization: str | None = Header(None)):
 @app.get("/auth/me", tags=["25 Account"])
 def auth_me(user: dict = Depends(current_user)):
     return {"user": user, "email_delivery": alerts.email_configured()}
+
+
+@app.delete("/auth/me", tags=["25 Account"])
+def auth_delete(user: dict = Depends(current_user)):
+    """Delete the account and everything saved with it."""
+    store.delete_user(user["id"])
+    return {"ok": True}
 
 
 @app.patch("/auth/me", tags=["25 Account"])
@@ -493,6 +631,13 @@ def alerts_rearm(alert_id: int, user: dict = Depends(current_user)):
     return {"ok": True}
 
 
+@app.get("/api/health", tags=["Meta"])
+def api_health(deep: bool = False):
+    """For uptime monitors (deep=false) and the Data Sources page (deep=true: also tests the data sources)."""
+    result = healthcheck.report(deep)
+    return JSONResponse(result, status_code=200 if result["status"] != "down" else 503)
+
+
 @app.get("/api/status", tags=["Meta"])
 def api_status():
     return {"status": "ok", "docs": "/docs", "accounts_persistent": store.PERSISTENT,
@@ -545,9 +690,12 @@ def root():
     # Stamp the JS/CSS URLs with their file-modified time so a browser can
     # never pair a fresh page with a stale cached script or stylesheet.
     html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
-    for name in ("app.js", "style.css"):
-        version = int((FRONTEND_DIR / name).stat().st_mtime)
-        html = html.replace(f"/static/{name}\"", f"/static/{name}?v={version}\"")
+
+    def stamp(match):
+        name = match.group(2)
+        file = FRONTEND_DIR / name
+        return f'{match.group(1)}/static/{name}?v={int(file.stat().st_mtime)}"' if file.is_file() else match.group(0)
+    html = re.sub(r'((?:src|href)=")/static/([\w./-]+)"', stamp, html)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 

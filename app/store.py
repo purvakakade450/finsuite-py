@@ -30,7 +30,7 @@ else:
 PERSISTENT = bool(os.environ.get("FINSUITE_DB")) or not os.environ.get("VERCEL")
 
 SESSION_DAYS = 30
-DATA_KEYS = {"watchlist", "portfolio", "settings"}
+DATA_KEYS = {"watchlist", "portfolio", "settings", "chat"}
 MAX_DATA_BYTES = 100_000
 MAX_ALERTS = 50
 _PBKDF2_ROUNDS = 200_000
@@ -50,7 +50,14 @@ CREATE TABLE IF NOT EXISTS alerts (
     price REAL NOT NULL, created_at TEXT NOT NULL, triggered_at TEXT, triggered_price REAL,
     emailed INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS counters (key TEXT PRIMARY KEY, n INTEGER NOT NULL, day TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS tokens (
+    token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL, purpose TEXT NOT NULL, expires_at REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS push_subs (
+    endpoint TEXT PRIMARY KEY, user_id INTEGER NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at TEXT NOT NULL);
 """
+# Columns added after the first release; older databases get them on start-up.
+_NEW_USER_COLUMNS = (("email_verified", "INTEGER NOT NULL DEFAULT 0"), ("telegram_chat_id", "TEXT"))
 _ready = False
 
 
@@ -71,6 +78,10 @@ def db():
     try:
         if not _ready:
             conn.executescript(_SCHEMA)
+            have = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+            for name, ddl in _NEW_USER_COLUMNS:
+                if name not in have:
+                    conn.execute(f"ALTER TABLE users ADD COLUMN {name} {ddl}")
             _ready = True
         yield conn
         conn.commit()
@@ -91,7 +102,8 @@ def _token_hash(token: str) -> str:
 
 def _public(row) -> dict:
     return {"id": row["id"], "email": row["email"], "name": row["name"],
-            "email_alerts": bool(row["email_alerts"]), "created_at": row["created_at"]}
+            "email_alerts": bool(row["email_alerts"]), "created_at": row["created_at"],
+            "email_verified": bool(row["email_verified"]), "telegram_linked": bool(row["telegram_chat_id"])}
 
 
 def _new_session(conn, user_id: int) -> str:
@@ -211,7 +223,7 @@ def mark_alerts_seen(user_id: int) -> None:
 
 def pending_alerts(user_id: int | None = None) -> list[dict]:
     """Alerts not yet triggered, with their owner's email settings."""
-    sql = ("SELECT a.*, u.email, u.name, u.email_alerts FROM alerts a JOIN users u ON u.id=a.user_id "
+    sql = ("SELECT a.*, u.email, u.name, u.email_alerts, u.telegram_chat_id FROM alerts a JOIN users u ON u.id=a.user_id "
            "WHERE a.triggered_at IS NULL" + (" AND a.user_id=?" if user_id else ""))
     with db() as conn:
         return [dict(r) for r in conn.execute(sql, (user_id,) if user_id else ())]
@@ -241,3 +253,121 @@ def claim_run(name: str, every_seconds: float) -> bool:
         conn.execute("INSERT INTO meta VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                      (name, str(now)))
         return True
+
+
+# ---------------------------------------------------------------------------
+# Daily counters (AI usage caps)
+# ---------------------------------------------------------------------------
+def counter_add(key: str, limit: int, day: str) -> tuple[bool, int]:
+    """Add one to a per-day counter unless it already reached `limit`."""
+    with db() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT n FROM counters WHERE key=?", (key,)).fetchone()
+        n = row["n"] if row else 0
+        if n >= limit:
+            return False, n
+        conn.execute("INSERT INTO counters VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET n=excluded.n",
+                     (key, n + 1, day))
+        conn.execute("DELETE FROM counters WHERE day < ?", (_days_ago(day, 3),))
+        return True, n + 1
+
+
+def _days_ago(day: str, n: int) -> str:
+    from datetime import date, timedelta
+    return (date.fromisoformat(day) - timedelta(days=n)).isoformat()
+
+
+def meta_get(key: str, default: str | None = None) -> str | None:
+    with db() as conn:
+        row = conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+        return row["value"] if row else default
+
+
+def meta_set(key: str, value: str) -> None:
+    with db() as conn:
+        conn.execute("INSERT INTO meta VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+
+
+# ---------------------------------------------------------------------------
+# One-time tokens: password reset, email verification, Telegram link codes
+# ---------------------------------------------------------------------------
+def create_token(user_id: int, purpose: str, ttl_seconds: int, raw: str | None = None) -> str:
+    raw = raw or secrets.token_urlsafe(32)
+    with db() as conn:
+        conn.execute("DELETE FROM tokens WHERE expires_at < ? OR (user_id=? AND purpose=?)",
+                     (time.time(), user_id, purpose))
+        conn.execute("INSERT INTO tokens VALUES (?,?,?,?)",
+                     (_token_hash(raw), user_id, purpose, time.time() + ttl_seconds))
+    return raw
+
+
+def consume_token(raw: str, purpose: str) -> int | None:
+    """Use a token once. Returns the user id, or None if it is unknown, used or expired."""
+    with db() as conn:
+        row = conn.execute("SELECT user_id FROM tokens WHERE token_hash=? AND purpose=? AND expires_at>?",
+                           (_token_hash(raw.strip()), purpose, time.time())).fetchone()
+        if not row:
+            return None
+        conn.execute("DELETE FROM tokens WHERE token_hash=?", (_token_hash(raw.strip()),))
+        return row["user_id"]
+
+
+def get_user_by_email(email: str) -> dict | None:
+    with db() as conn:
+        row = conn.execute("SELECT * FROM users WHERE email=?", (email.strip().lower(),)).fetchone()
+        return _public(row) if row else None
+
+
+def set_password(user_id: int, password: str) -> None:
+    if len(password) < 8:
+        raise AuthError("Password must be at least 8 characters.")
+    salt = secrets.token_hex(16)
+    with db() as conn:
+        conn.execute("UPDATE users SET pw_hash=?, salt=? WHERE id=?", (_hash(password, salt), salt, user_id))
+        conn.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))      # log out everywhere
+
+
+def mark_verified(user_id: int) -> None:
+    with db() as conn:
+        conn.execute("UPDATE users SET email_verified=1 WHERE id=?", (user_id,))
+
+
+def delete_user(user_id: int) -> None:
+    with db() as conn:
+        for table in ("sessions", "user_data", "alerts", "tokens", "push_subs"):
+            conn.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+
+
+# ---------------------------------------------------------------------------
+# Notification channels: browser push and Telegram
+# ---------------------------------------------------------------------------
+def add_push_sub(user_id: int, endpoint: str, p256dh: str, auth: str) -> None:
+    with db() as conn:
+        conn.execute("INSERT INTO push_subs VALUES (?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET "
+                     "user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth",
+                     (endpoint, user_id, p256dh, auth, _now()))
+
+
+def remove_push_sub(endpoint: str, user_id: int | None = None) -> None:
+    with db() as conn:
+        if user_id is None:
+            conn.execute("DELETE FROM push_subs WHERE endpoint=?", (endpoint,))
+        else:
+            conn.execute("DELETE FROM push_subs WHERE endpoint=? AND user_id=?", (endpoint, user_id))
+
+
+def push_subs(user_id: int) -> list[dict]:
+    with db() as conn:
+        return [dict(r) for r in conn.execute("SELECT * FROM push_subs WHERE user_id=?", (user_id,))]
+
+
+def set_telegram(user_id: int, chat_id: str | None) -> None:
+    with db() as conn:
+        conn.execute("UPDATE users SET telegram_chat_id=? WHERE id=?", (chat_id, user_id))
+
+
+def start_session(user_id: int) -> dict:
+    with db() as conn:
+        user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+        return {"token": _new_session(conn, user["id"]), "user": _public(user)}

@@ -34,6 +34,10 @@ cp "$APP_DIR/deploy/finsuite.service" /etc/systemd/system/finsuite.service
 systemctl daemon-reload
 systemctl enable --now finsuite
 
+# Daily database backup and uptime check
+install -m 644 "$APP_DIR/deploy/finsuite.cron" /etc/cron.d/finsuite
+mkdir -p /var/backups/finsuite
+
 # Nginx in front of it
 SERVER_NAME="${DOMAIN:-_}"
 sed "s/__SERVER_NAME__/$SERVER_NAME/" "$APP_DIR/deploy/nginx.conf" > /etc/nginx/sites-available/finsuite

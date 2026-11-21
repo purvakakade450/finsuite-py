@@ -263,3 +263,12 @@ class AlertIn(BaseModel):
     symbol: str = Field(min_length=1)
     type: str = Field(pattern="^(above|below)$")
     price: float = Field(gt=0)
+
+
+class ForgotIn(BaseModel):
+    email: str
+
+
+class ResetIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+    password: str = Field(min_length=8, max_length=200)

@@ -1,0 +1,4 @@
+# FinSuite maintenance jobs (installed to /etc/cron.d/finsuite by setup.sh / update.sh)
+FINSUITE_DB=/var/lib/finsuite/finsuite.db
+*/5 * * * * root /usr/bin/python3 /opt/finsuite/deploy/healthcheck.py >> /var/log/finsuite-health.log 2>&1
+15 3 * * * root /usr/bin/python3 /opt/finsuite/deploy/backup.py >> /var/log/finsuite-backup.log 2>&1

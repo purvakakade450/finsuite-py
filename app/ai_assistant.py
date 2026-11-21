@@ -28,6 +28,7 @@ log = logging.getLogger("finsuite.ai")
 
 MODEL = os.environ.get("FINSUITE_AI_MODEL", "claude-opus-5-5")
 MAX_TOOL_ROUNDS = 8
+MAX_OUTPUT_TOKENS = int(os.environ.get("AI_MAX_TOKENS", 8000))   # per answer; keeps cost bounded
 MAX_HISTORY = 24          # earlier messages sent back with each question
 
 SYSTEM_PROMPT = """You are the FinSuite AI assistant, built into FinSuite, a finance web app made for Indian users (students, first-time investors, small savers) by Purva Gajanan Kakade under the guidance of Prof. Ashish Singh, SJMSOM, IIT Bombay.
@@ -387,7 +388,7 @@ def chat_stream(history: list[dict], context: dict | None = None) -> Iterator[st
             try:
                 with client.beta.messages.stream(
                     model=MODEL,
-                    max_tokens=64000,
+                    max_tokens=MAX_OUTPUT_TOKENS,
                     system=SYSTEM_PROMPT,
                     tools=TOOL_DEFS,
                     messages=messages,
