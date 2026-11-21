@@ -55,6 +55,12 @@ def cached(lang: str) -> dict[str, dict]:
 
 def translate_batch(lang: str, entries: list[dict]) -> list[dict]:
     """Ask the model to translate up to BATCH entries. Returns [{term, q, a, example}]."""
+    if ai_assistant.provider() == "compat":          # a free OpenAI-style service
+        from . import ai_compat
+        data = ai_compat.complete_json(
+            PROMPT.format(language=LANGS[lang]) + ' Reply with only a JSON object {"items": [{"term", "q", "a", "example"}, ...]}.',
+            json.dumps(entries, ensure_ascii=False))
+        return data["items"]
     import anthropic
     client = anthropic.Anthropic()
     resp = client.messages.create(

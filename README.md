@@ -93,6 +93,8 @@ python -m app.market TCS
 | Variable | Purpose |
 |---|---|
 | `ANTHROPIC_API_KEY` | Turns on the AI Assistant (Claude with FinSuite's calculators and live data as tools); without it the chat answers from the Knowledge Center |
+| `AI_API_KEY` | **Free option:** a key from Google AI Studio (https://aistudio.google.com/apikey) or Groq (https://console.groq.com/keys); turns the assistant on with no payment |
+| `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL` | Free service to use: `gemini` (default), `groq`, `openrouter`, `mistral` or `custom` (with `AI_BASE_URL`); optional model name |
 | `FINSUITE_AI_MODEL` | Model for the AI Assistant (default `claude-opus-5-5`) |
 | `FINSUITE_DB` | SQLite file for accounts and saved data (default `data/finsuite.db`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Email delivery for price alerts |

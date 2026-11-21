@@ -355,8 +355,31 @@ def run_tool(name: str, args) -> tuple[str, bool]:
 # ---------------------------------------------------------------------------
 # Chat
 # ---------------------------------------------------------------------------
-def enabled() -> bool:
+def anthropic_key() -> bool:
     return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+
+
+def provider() -> str | None:
+    """"anthropic" (paid Claude), "compat" (a free Gemini / Groq / OpenRouter model) or None. AI_PROVIDER=anthropic
+    forces Claude when both keys are set; otherwise a Claude key is used first."""
+    from . import ai_compat
+    if anthropic_key() and os.environ.get("AI_PROVIDER", "").lower() in ("", "anthropic"):
+        return "anthropic"
+    if ai_compat.configured():
+        return "compat"
+    return "anthropic" if anthropic_key() else None
+
+
+def enabled() -> bool:
+    return provider() is not None
+
+
+def model_name() -> str | None:
+    kind = provider()
+    if kind == "compat":
+        from . import ai_compat
+        return ai_compat.settings()[1]
+    return MODEL if kind else None
 
 
 def _event(**kw) -> str:
@@ -384,6 +407,11 @@ def chat_stream(history: list[dict], context: dict | None = None, language: str 
         yield _event(type="notice", message="AI mode is off on this server (no API key), so this is a Knowledge Center answer.")
         yield _event(type="text", text=calculators.chat_reply(question))
         yield _event(type="done")
+        return
+
+    if provider() == "compat":                       # a free OpenAI-style service instead of Claude
+        from . import ai_compat
+        yield from ai_compat.chat_stream(history, context, language)
         return
 
     import anthropic

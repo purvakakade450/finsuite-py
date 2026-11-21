@@ -152,7 +152,7 @@ def assistant_chat(body: s.ChatIn):
 
 @app.get("/assistant/ai-status", tags=["02 AI Finance Assistant"])
 def assistant_ai_status():
-    return {"enabled": ai_assistant.enabled(), "model": ai_assistant.MODEL if ai_assistant.enabled() else None}
+    return {"enabled": ai_assistant.enabled(), "model": ai_assistant.model_name(), "provider": ai_assistant.provider()}
 
 
 @app.post("/assistant/ai-chat", tags=["02 AI Finance Assistant"])
