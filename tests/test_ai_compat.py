@@ -46,7 +46,7 @@ def events(stream):
 
 # --------------------------------------------------------------------- settings
 def test_presets_and_overrides(free):
-    assert ai_compat.settings() == ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.8-flash", "free-key")
+    assert ai_compat.settings() == ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.8-flash", "free-key")
     free.setenv("AI_PROVIDER", "groq")
     assert ai_compat.settings()[:2] == ("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile")
     free.setenv("AI_MODEL", "openai/gpt-oss-120b")
@@ -57,7 +57,7 @@ def test_presets_and_overrides(free):
 
 def test_provider_choice(free):
     assert ai_assistant.provider() == "compat" and ai_assistant.enabled()
-    assert ai_assistant.model_name() == "gemini-3.8-flash"
+    assert ai_assistant.model_name().startswith("gemini-3.1-flash-lite")
     free.setenv("ANTHROPIC_API_KEY", "sk-ant-x")
     assert ai_assistant.provider() == "anthropic"            # a Claude key is used first
     free.setenv("AI_PROVIDER", "groq")
@@ -97,7 +97,7 @@ def test_tool_round_trip(free):
 
     url, first, headers = sent[0]
     assert url == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-    assert headers["Authorization"] == "Bearer free-key" and first["model"] == "gemini-3.8-flash" and first["stream"] is True
+    assert headers["Authorization"] == "Bearer free-key" and first["model"] == "gemini-3.1-flash-lite" and first["stream"] is True
     assert "Hindi" in first["messages"][0]["content"] and "TCS.NS" in first["messages"][0]["content"]
     second = sent[1][1]["messages"]
     assistant, tool = second[-2], second[-1]
@@ -177,7 +177,82 @@ def test_translation_uses_the_free_provider(free):
 def test_endpoint_end_to_end_on_the_free_provider(client, free):
     free.setattr(requests, "post", lambda *a, **k: FakeResponse(chunks=[delta(content="Hello from a free model"), finish("stop")]))
     status = client.get("/assistant/ai-status").json()
-    assert status == {"enabled": True, "model": "gemini-3.8-flash", "provider": "compat"}
+    assert status["enabled"] and status["provider"] == "compat" and status["model"].startswith("gemini-3.1-flash-lite")
     r = client.post("/assistant/ai-chat", json={"messages": [{"role": "user", "content": "hi"}]})
     ev = [json.loads(line) for line in r.text.splitlines() if line.strip()]
     assert any("free model" in e.get("text", "") for e in ev) and ev[-1]["type"] == "done"
+
+
+# ---------------------------------------------------- several free models in turn
+def test_models_are_tried_in_order_when_one_is_out_of_quota(free):
+    free.setenv("AI_MODEL", "model-a,model-b,model-c")
+    assert ai_compat.model_list() == ["model-a", "model-b", "model-c"]
+    asked = []
+
+    def fake_post(url, json=None, **k):
+        asked.append(json["model"])
+        if json["model"] in ("model-a", "model-b"):
+            return FakeResponse(status=429)                        # daily allowance used up
+        return FakeResponse(chunks=[delta(content="answer from c"), finish("stop")])
+    free.setattr(requests, "post", fake_post)
+    ev = events(ai_compat.chat_stream([{"role": "user", "content": "hi"}]))
+    assert asked == ["model-a", "model-b", "model-c"]
+    assert "answer from c" in "".join(e.get("text", "") for e in ev) and not any(e["type"] == "error" for e in ev)
+
+
+def test_a_wrong_key_is_not_retried_on_other_models(free):
+    free.setenv("AI_MODEL", "model-a,model-b")
+    asked = []
+    free.setattr(requests, "post", lambda url, json=None, **k: asked.append(json["model"]) or FakeResponse(status=401))
+    ev = events(ai_compat.chat_stream([{"role": "user", "content": "hi"}]))
+    assert asked == ["model-a"] and "rejected the API key" in ev[0]["message"]
+
+
+def test_when_every_model_is_out_the_user_is_told(free):
+    free.setenv("AI_MODEL", "model-a,model-b")
+    free.setattr(requests, "post", lambda *a, **k: FakeResponse(status=429))
+    assert "free allowance" in events(ai_compat.chat_stream([{"role": "user", "content": "hi"}]))[0]["message"]
+
+
+def test_a_slow_model_is_skipped(free):
+    free.setenv("AI_MODEL", "slow,fast")
+    waits = []
+
+    def fake_post(url, json=None, timeout=None, **k):
+        waits.append((json["model"], timeout[1]))
+        if json["model"] == "slow":
+            raise requests.Timeout("no answer")
+        return FakeResponse(chunks=[delta(content="ok"), finish("stop")])
+    free.setattr(requests, "post", fake_post)
+    ev = events(ai_compat.chat_stream([{"role": "user", "content": "hi"}]))
+    assert [m for m, _ in waits] == ["slow", "fast"] and waits[0][1] == 40 and waits[1][1] == 120   # a short wait only while a spare model exists
+    assert "ok" in "".join(e.get("text", "") for e in ev)
+
+
+def test_later_rounds_stay_on_the_model_that_started_the_answer(free):
+    free.setenv("AI_MODEL", "model-a,model-b")
+    asked = []
+    rounds = [[delta(tool_calls=[{"index": 0, "id": "t", "function": {"name": "lookup_finance_term", "arguments": '{"term": "RSI"}'}}]), finish("tool_calls")],
+              [delta(content="done"), finish("stop")]]
+
+    def fake_post(url, json=None, **k):
+        asked.append(json["model"])
+        if json["model"] == "model-a":
+            return FakeResponse(status=503)
+        return FakeResponse(chunks=rounds[len([m for m in asked if m == "model-b"]) - 1])
+    free.setattr(requests, "post", fake_post)
+    events(ai_compat.chat_stream([{"role": "user", "content": "explain"}]))
+    assert asked == ["model-a", "model-b", "model-b"]
+
+
+def test_json_answers_also_move_to_the_next_model(free):
+    free.setenv("AI_MODEL", "model-a,model-b")
+    asked = []
+
+    def fake_post(url, json=None, **k):
+        asked.append(json["model"])
+        if json["model"] == "model-a":
+            return FakeResponse(status=429)
+        return FakeResponse(body={"choices": [{"message": {"content": '{"items": []}'}}]})
+    free.setattr(requests, "post", fake_post)
+    assert ai_compat.complete_json("s", "u") == {"items": []} and asked == ["model-a", "model-b"]

@@ -28,7 +28,9 @@ log = logging.getLogger("finsuite.ai")
 
 # provider: (base address, default model)
 PRESETS = {
-    "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.8-flash"),
+    # Free tiers give each model its own small daily allowance (one Gemini model allows only 20 requests a day),
+    # so several are listed: when one has run out or is overloaded, the next one is tried.
+    "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.8-flash"),
     "groq": ("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
     "openrouter": ("https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free"),
     "mistral": ("https://api.mistral.ai/v1", "mistral-small-latest"),
@@ -49,8 +51,13 @@ def configured() -> bool:
     return bool(os.environ.get("AI_API_KEY", "").strip())
 
 
+def model_list() -> list[str]:
+    """The models to try, in order (AI_MODEL may hold several, separated by commas)."""
+    return [m.strip() for m in settings()[1].split(",") if m.strip()]
+
+
 def settings() -> tuple[str, str, str]:
-    """(base address, model, key)"""
+    """(base address, model or comma-separated models, key)"""
     provider = os.environ.get("AI_PROVIDER", "gemini").strip().lower()
     base, model = PRESETS.get(provider, (os.environ.get("AI_BASE_URL", ""), os.environ.get("AI_MODEL", "")))
     return (os.environ.get("AI_BASE_URL", base).rstrip("/"), os.environ.get("AI_MODEL", model) or model,
@@ -85,11 +92,17 @@ def _explain(status: int | None, text: str) -> str:
     return f"The AI service returned an error ({status}). Please try again."
 
 
-def _post(payload: dict, stream: bool):
+_RETRY_ON_NEXT_MODEL = (None, 429, 500, 502, 503, 504)     # out of quota, overloaded, unreachable or too slow
+
+
+def _post(payload: dict, stream: bool, wait: int | None = None):
     base, _model, key = settings()
     try:
-        r = requests.post(f"{base}/chat/completions", json=payload, stream=stream, timeout=(10, 120 if stream else 75),
+        r = requests.post(f"{base}/chat/completions", json=payload, stream=stream,
+                          timeout=(10, wait or (120 if stream else 75)),
                           headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+    except requests.Timeout as e:
+        raise ProviderError(None, "The AI service took too long to answer. Please try again.") from e
     except requests.RequestException as e:
         raise ProviderError(None, "Could not reach the AI service. Check the internet connection.") from e
     if r.status_code != 200:
@@ -100,6 +113,20 @@ def _post(payload: dict, stream: bool):
             pass
         raise ProviderError(r.status_code, _explain(r.status_code, body))
     return r
+
+
+def _first_working(models: list[str], send):
+    """Call send(model) for each model until one succeeds; only a quota, overload or timeout moves on to the next."""
+    last: ProviderError | None = None
+    for i, model in enumerate(models):
+        try:
+            return model, send(model, 40 if i < len(models) - 1 else None)
+        except ProviderError as e:
+            last = e
+            if e.status not in _RETRY_ON_NEXT_MODEL:
+                raise
+            log.info("AI model %s unavailable (%s), trying the next one", model, e.status)
+    raise last
 
 
 def _read_stream(response) -> Iterator[tuple[str, object]]:
@@ -145,7 +172,7 @@ def _read_stream(response) -> Iterator[tuple[str, object]]:
 
 def chat_stream(history: list[dict], context: dict | None = None, language: str = "en") -> Iterator[str]:
     """Same events as ai_assistant.chat_stream: tool, text, error, done."""
-    _base, model, _key = settings()
+    models = model_list()
     system = core.SYSTEM_PROMPT + core.LANGUAGE_NOTES.get(language, "")
     note = core._context_note(context)
     if note:
@@ -155,10 +182,12 @@ def chat_stream(history: list[dict], context: dict | None = None, language: str 
     tools = tool_list()
     try:
         for _round in range(core.MAX_TOOL_ROUNDS):
-            payload = {"model": model, "messages": messages, "tools": tools, "stream": True,
-                       "max_tokens": core.MAX_OUTPUT_TOKENS}
+            payload = {"messages": messages, "tools": tools, "stream": True, "max_tokens": core.MAX_OUTPUT_TOKENS}
             text, calls, finish = "", [], None
-            response = _post(payload, stream=True)
+            # The first request of a question may move to another model; the rest stay with the one that answered,
+            # because some models tie a tool call to the model that made it.
+            chosen, response = _first_working(models, lambda m, wait: _post({**payload, "model": m}, stream=True, wait=wait))
+            models = [chosen]
             try:
                 for kind, value in _read_stream(response):
                     if kind == "text":
@@ -196,14 +225,16 @@ def chat_stream(history: list[dict], context: dict | None = None, language: str 
 
 def complete_json(system: str, user: str) -> dict:
     """One non-streaming request that must answer with a JSON object (used for translations)."""
-    _base, model, _key = settings()
-    payload = {"model": model, "temperature": 0, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-    try:
-        reply = _post({**payload, "response_format": {"type": "json_object"}}, stream=False)
-    except ProviderError as e:
-        if e.status != 400:
-            raise
-        reply = _post(payload, stream=False)                # a provider without JSON mode: ask in plain text
+    payload = {"temperature": 0, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+
+    def ask(model, wait):
+        try:
+            return _post({**payload, "model": model, "response_format": {"type": "json_object"}}, stream=False, wait=wait)
+        except ProviderError as e:
+            if e.status != 400:
+                raise
+            return _post({**payload, "model": model}, stream=False, wait=wait)   # a provider without JSON mode
+    _model, reply = _first_working(model_list(), ask)
     content = reply.json()["choices"][0]["message"]["content"] or ""
     content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip())
     return json.loads(content)
