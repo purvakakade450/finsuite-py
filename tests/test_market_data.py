@@ -172,3 +172,23 @@ def test_stale_cache_is_flagged(monkeypatch):
     assert market._cached("k", 0, fetch) == {"price": 1}      # ttl 0: next call tries again
     again = market._cached("k", 0, fetch)
     assert again["price"] == 1 and again["stale"] is True
+
+
+def test_amfi_falls_back_to_the_second_address(monkeypatch):
+    tried = []
+
+    class Reply:
+        content = NAV_NEW.encode()
+
+    def fake_get(url, timeout=20):
+        tried.append(url)
+        if "portal" in url:
+            raise OSError("this data centre cannot reach the first address")
+        return Reply()
+    monkeypatch.setattr(mf, "_get", fake_get)
+    assert "Alpha Flexi Cap" in mf._parse_navall(mf._fetch_navall())[0]["name"]
+    assert len(tried) == 2 and tried[0] != tried[1]
+    monkeypatch.setattr(mf, "_get", lambda url, timeout=20: (_ for _ in ()).throw(OSError("both down")))
+    import pytest as _pytest
+    with _pytest.raises(OSError):
+        mf._fetch_navall()

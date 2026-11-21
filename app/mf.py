@@ -14,13 +14,15 @@ import requests
 
 from .market import _cached
 
-AMFI_URL = "https://www.amfiindia.com/spages/NAVAll.txt"
+# AMFI serves the same file from two addresses; some data centres can reach only one of them.
+AMFI_URLS = ["https://portal.amfiindia.com/spages/NAVAll.txt", "https://www.amfiindia.com/spages/NAVAll.txt"]
+AMFI_URL = AMFI_URLS[0]
 HISTORY_URL = "https://api.mfapi.in/mf/{code}"
 NAV_TTL = 6 * 60 * 60
 
 
-def _get(url: str) -> requests.Response:
-    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+def _get(url: str, timeout: int = 20) -> requests.Response:
+    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=timeout)
     resp.raise_for_status()
     return resp
 
@@ -51,9 +53,18 @@ def _parse_navall(text: str) -> list[dict]:
     return funds
 
 
+def _fetch_navall() -> str:
+    last: Exception | None = None
+    for url in AMFI_URLS:
+        try:
+            return _get(url, timeout=30).content.decode("utf-8", "replace")
+        except Exception as e:             # try the other address
+            last = e
+    raise last
+
+
 def all_funds() -> list[dict]:
-    return _cached("amfi:navall", NAV_TTL,
-                   lambda: _parse_navall(_get(AMFI_URL).content.decode("utf-8", "replace")))
+    return _cached("amfi:navall", NAV_TTL, lambda: _parse_navall(_fetch_navall()))
 
 
 def search_funds(query: str, limit: int = 15) -> list[dict]:

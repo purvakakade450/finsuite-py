@@ -35,7 +35,14 @@ def _yahoo() -> None:
 
 
 def _amfi() -> None:
-    requests.head(mf.AMFI_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=8, allow_redirects=True).raise_for_status()
+    last: Exception | None = None
+    for url in mf.AMFI_URLS:                  # healthy if either address answers
+        try:
+            requests.head(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10, allow_redirects=True).raise_for_status()
+            return
+        except Exception as e:
+            last = e
+    raise last
 
 
 def _news() -> None:
