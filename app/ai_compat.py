@@ -88,7 +88,7 @@ def _explain(status: int | None, text: str) -> str:
 def _post(payload: dict, stream: bool):
     base, _model, key = settings()
     try:
-        r = requests.post(f"{base}/chat/completions", json=payload, stream=stream, timeout=(10, 120),
+        r = requests.post(f"{base}/chat/completions", json=payload, stream=stream, timeout=(10, 120 if stream else 75),
                           headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
     except requests.RequestException as e:
         raise ProviderError(None, "Could not reach the AI service. Check the internet connection.") from e

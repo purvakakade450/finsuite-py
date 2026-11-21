@@ -73,7 +73,7 @@ ARCH = ("<svg viewBox='0 0 620 400' width='100%' font-family='Times New Roman, s
         + box(6, 308, 120, 58, "SQLite", ["accounts, saved data,", "alerts, counters"], "#f3f3f3")
         + box(132, 308, 120, 58, "Yahoo, Google News", ["prices, FX, headlines"], "#f3f3f3")
         + box(258, 308, 110, 58, "AMFI, mfapi.in", ["fund NAVs"], "#f3f3f3")
-        + box(374, 308, 120, 58, "Anthropic API", ["AI model (optional)"], "#f3f3f3")
+        + box(374, 308, 120, 58, "AI model service", ["Gemini, Groq or Claude"], "#f3f3f3")
         + box(500, 308, 114, 58, "Email, Telegram,", ["Web Push (optional)"], "#f3f3f3")
         + "<text x='6' y='388' font-size='9' font-style='italic'>Hosting: a small Ubuntu server (nginx in front, systemd restarts the app) or a serverless host without the background worker.</text>"
         "</svg>")
@@ -215,7 +215,7 @@ def build() -> str:
         ("Google News", "Headlines from the last seven days", "Public RSS feed, no key", "08, 15"),
         ("AMFI", "Latest net asset value of every mutual-fund scheme", "Public text file, no key", "12"),
         ("mfapi.in", "Historical NAVs of a scheme", "Free public API, no key", "12"),
-        ("Anthropic API", "Language model for the assistant and for translations", "API key (optional)", "02, 22"),
+        ("AI model service", "Language model for the assistant and the translations: a free Google Gemini or Groq model, or Anthropic Claude", "API key (optional; a free key is enough)", "02, 22"),
         ("Email, Telegram, Web Push", "Delivery of alerts", "Mail account, bot token, browser keys (optional)", "10"),
         ("The user", "Numbers typed into forms, an optional bank statement", "Statement read in the browser, never uploaded", "most tools"),
     ], ["18%", "34%", "30%", "18%"], small=True))
@@ -253,7 +253,7 @@ def build() -> str:
     a("<h3>5.3 Rule-based scores</h3><p>The credit, investment and company scores are the expert rules of version 1.0 with conventional thresholds (for example, a BUY needs at least three of four checks: "
       "growth, margin, ROA and ROE above set levels). They were not fitted to data; their purpose is to teach, and each rule is shown to the user.</p>")
 
-    a("<h2>6. The AI Assistant</h2><h3>6.1 Design</h3><p>The assistant is a language model (Claude Opus 5.5 by default, configurable) that can call sixteen tools. "
+    a("<h2>6. The AI Assistant</h2><h3>6.1 Design</h3><p>The assistant is a language model that can call sixteen tools. It runs on Anthropic Claude or, with no payment at all, on a free Google Gemini or Groq model through their OpenAI-style interface (the deployed site uses a free Gemini model); the tools, limits and screens are the same for both. "
       "The tools wrap functions that already exist in FinSuite: live quote, technical indicators, two-stock comparison, news with sentiment, company and fund search, currency conversion, "
       "income tax, loan EMI, goal and retirement planning, budget analysis, SIP returns, portfolio valuation, price forecast and a Knowledge Center lookup. "
       "Figure 2 shows one question. The model decides which tools to call; FinSuite validates every tool input with the same Pydantic rules as the website, runs the tool, and returns the result. "
@@ -287,7 +287,8 @@ def build() -> str:
       "Another job asks the health endpoint every five minutes and emails the administrator after two failures in a row, and again on recovery. "
       "The Data Sources page shows the live status of each outside source, which is checked at most once a minute. Settings are environment variables (Table 5).</p>")
     a(table("Environment settings (all optional).", ["Setting", "Effect"], [
-        ("ANTHROPIC_API_KEY", "Turns on the AI assistant and the translations."),
+        ("AI_API_KEY, AI_PROVIDER, AI_MODEL", "Turns on the AI assistant and the translations on a free service (gemini, groq, openrouter, mistral or custom)."),
+        ("ANTHROPIC_API_KEY", "The same, on paid Claude."),
         ("SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM", "Email for alerts, resets and confirmations."),
         ("TELEGRAM_BOT_TOKEN", "Turns on Telegram alerts."),
         ("FINSUITE_DB", "Location of the SQLite file."),
@@ -337,21 +338,22 @@ def build() -> str:
       "(Fama, 1970): past prices and volume alone carry almost no usable information about the next day. The website therefore shows the baseline beside every model, the walk-forward table and a plain statement when no model wins.</p>"
       "<p><b>Limits of the experiment.</b> It uses four instruments at one point in time, only price and volume inputs, no trading costs, and no formal significance test; five stretches are few. It shows the absence of a consistent advantage; it does not prove that none exists.</p>")
 
-    a("<h2>9. Verification</h2><h3>9.1 Automated tests</h3><p>The project has 122 automated tests (Table 8). They run without the internet, using made-up price data and a temporary database, "
+    a("<h2>9. Verification</h2><h3>9.1 Automated tests</h3><p>The project has 139 automated tests (Table 9). They run without the internet, using made-up price data and a temporary database, "
       "and are run by the repository's continuous-integration workflow on every push, together with a syntax check of every script.</p>")
     a(table("The automated test suite.", ["File", "Tests", "What is checked"], [
         ("test_calculators.py", "22", "Tax on 15 lakh (&#8377;97,500), the rebate boundary, marginal relief, caps, break-even; EMI (&#8377;21,696 on 25 lakh at 8.5% for 20 years); budget; FIRE; goals."),
-        ("test_market_data.py", "16", "Indicators, comparison, sentiment, AMFI parsing (both layouts), XIRR, SIP, tracker with foreign holdings, stale-cache flag."),
+        ("test_market_data.py", "17", "Indicators, comparison, sentiment, AMFI parsing (both layouts), XIRR, SIP, tracker with foreign holdings, stale-cache flag."),
         ("test_accounts.py", "22", "Sign-up, login, one-use tokens, password reset, email confirmation, alerts firing once, limits, account deletion, health."),
-        ("test_api_and_ai.py", "17", "Endpoints, CORS, compression, caching, tab numbering, every information icon, tool schemas, AI daily caps."),
-        ("test_channels_and_i18n.py", "14", "Push keys and delivery, Telegram linking, a failing channel, Hindi and Marathi translation cache."),
+        ("test_api_and_ai.py", "18", "Endpoints, CORS, compression, caching, tab numbering, every information icon, tool schemas, AI daily caps."),
+        ("test_channels_and_i18n.py", "15", "Push keys and delivery, Telegram linking, a failing channel, Hindi and Marathi translation cache."),
         ("test_ml_and_tax_gains.py", "12", "Four models, forecast range, walk-forward, repeatability, share-market gains in tax."),
+        ("test_ai_compat.py", "14", "The assistant on a free OpenAI-style service: streaming, tool rounds, Gemini 3 call signatures, errors, JSON answers, translation."),
         ("test_statement_js.py", "19", "Bank-statement import run under Node: dates, amounts, quoted fields, two statement layouts."),
     ], ["25%", "8%", "67%"], small=True))
     a("<p>A browser test with Playwright opens all twenty-four tools and checks, among other things, that every field label is linked to its input, focus moves to a new section, "
       "the statement import fills the budget, the tax tool includes gains, the AI chat works in Hindi, the account window behaves, and that the phone layout has no sideways scrolling. "
-      "The AI integration was tested against a local stand-in that speaks the same streaming protocol; the behaviour of the live model is not part of the automated tests, "
-      "because it needs a paid key and its answers vary.</p>")
+      "The AI integrations were tested against local stand-ins that speak the same streaming protocols. The live model's behaviour is not part of the automated tests because its answers vary; it was checked by hand on the deployed site with a free Gemini model (a tax comparison, a live price with RSI, and an EMI question in Hindi), and the numbers matched the calculators. "
+      "</p>")
     a("<h3>9.2 Defects found and corrected</h3>")
     a(table("Defects found while building this version.", ["Defect", "Found by", "Correction"], [
         ("A new module named <i>health</i> hid an older function of the same name, so the health endpoint failed.", "Automated test", "Module imported under another name."),
@@ -368,15 +370,15 @@ def build() -> str:
     a("<h2>10. Running and Deploying</h2><p>To run locally: create a virtual environment, install <i>requirements.txt</i>, optionally put settings in a <i>.env</i> file (not committed), and start "
       "<i>python app/main.py</i>. To test: install <i>requirements-dev.txt</i> and run <i>python -m pytest</i>. The deployed system runs on a small Ubuntu server (about 1 GB of memory, with a 2 GB swap file) "
       "using the scripts in the <i>deploy</i> folder: <i>setup.sh</i> installs the service, nginx, the firewall, the backup and the uptime check; <i>update.sh</i> pulls the latest code and restarts. "
-      "A serverless deployment also works, with two differences: stored accounts can be reset when the host recycles its storage, and the background worker does not run, so alerts are checked only while a page is open.</p>"
+      "The deployed site is served on its own domain over HTTPS (a certificate that renews itself), with security updates applied automatically. A serverless deployment also works, with two differences: stored accounts can be reset when the host recycles its storage, and the background worker does not run, so alerts are checked only while a page is open.</p>"
       "<p>Browsers allow service workers, installation and push notifications only on secure (HTTPS) addresses, so these features need a domain name with a certificate.</p>")
 
     a("<h2>11. Limitations and Future Work</h2><p>Market data comes from unofficial sources and can be delayed or unavailable. The tax tool is a simplified model; it does not cover every income type or the surcharge on share gains. "
-      "The assistant can make mistakes and its tax and investment statements should be checked in the calculators. Hindi and Marathi texts are machine translations that have not been reviewed by a person. "
+      "The assistant can make mistakes and its tax and investment statements should be checked in the calculators. Hindi and Marathi texts are machine translations that have not been reviewed by a person. A free AI plan has daily limits and the provider may reuse prompts. "
       "SQLite limits the system to one server. No study with real users has been carried out. Future work includes human review of the translations, an accessibility audit, a second data source for prices, "
       "and a larger forecasting study with more instruments and a significance test.</p>")
     a("<h2>12. Conclusion</h2><p>FinSuite now offers twenty-four explained tools, a tool-using assistant, optional accounts with alerts on three channels, and an installable offline app, "
-      "while keeping each result checkable. The additions were made with limits on cost and use, backups and monitoring, and 122 automated tests. The forecasting experiment again found no consistent advantage over the naive guess, "
+      "while keeping each result checkable. The additions were made with limits on cost and use, backups and monitoring, and 139 automated tests. The forecasting experiment again found no consistent advantage over the naive guess, "
       "and the website says so.</p>")
 
     a("<h2>References</h2><ol class='refs'>"

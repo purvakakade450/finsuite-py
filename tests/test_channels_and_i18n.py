@@ -162,3 +162,34 @@ def test_chat_accepts_only_known_languages(client):
     body = {"messages": [{"role": "user", "content": "hi"}]}
     assert client.post("/assistant/ai-chat", json={**body, "language": "hi"}).status_code == 200
     assert client.post("/assistant/ai-chat", json={**body, "language": "xx"}).status_code == 422
+
+
+def test_a_failed_batch_is_retried_and_does_not_stop_the_rest(client, monkeypatch):
+    monkeypatch.setattr(ai_assistant, "enabled", lambda: True)
+    with store.db() as conn:
+        conn.execute("DELETE FROM translations") if conn.execute("SELECT name FROM sqlite_master WHERE name='translations'").fetchone() else None
+    seen = {"calls": 0, "first": None}
+
+    def flaky(lang, entries):
+        seen["calls"] += 1
+        if seen["first"] is None:
+            seen["first"] = entries[0]["term"]
+        if entries[0]["term"] == seen["first"] and seen["calls"] <= 3:     # the first batch fails every time
+            raise RuntimeError("slow upstream")
+        return _fake_translation(lang, entries)
+    monkeypatch.setattr(translate, "translate_batch", flaky)
+    import time
+    client.get("/knowledge/glossary?lang=hi")
+    for _ in range(100):
+        d = client.get("/knowledge/glossary?lang=hi").json()
+        if not d["pending"]:
+            break
+        time.sleep(0.1)
+    # the failed batch did not stop the others, and the next visit picks it up again
+    assert d["translated"] >= d["total"] - translate.BATCH
+    for _ in range(100):
+        d = client.get("/knowledge/glossary?lang=hi").json()
+        if d["translated"] == d["total"]:
+            break
+        time.sleep(0.1)
+    assert d["translated"] == d["total"]

@@ -71,21 +71,36 @@ def translate_batch(lang: str, entries: list[dict]) -> list[dict]:
     return json.loads(text)["items"]
 
 
+def _store(lang: str, chunk: list[dict], items: list[dict]) -> None:
+    wanted = {g["term"] for g in chunk}
+    with store.db() as conn:
+        for it in items:
+            if it["term"] in wanted:
+                conn.execute("INSERT INTO translations VALUES (?,?,?) ON CONFLICT(lang, term) DO UPDATE SET data=excluded.data",
+                             (lang, it["term"], json.dumps({k: it[k] for k in ("q", "a", "example")}, ensure_ascii=False)))
+
+
 def _translate_all(lang: str) -> None:
+    """Translate what is missing, a batch at a time. A failed batch is tried again (twice) and then skipped, so one slow
+    or refused request does not stop the rest; after three failed batches in a row the run stops until the next visit."""
     try:
-        done = cached(lang)
-        todo = [g for g in GLOSSARY if g["term"] not in done]
+        todo = [g for g in GLOSSARY if g["term"] not in cached(lang)]
+        failures = 0
         for i in range(0, len(todo), BATCH):
             chunk = todo[i:i + BATCH]
-            items = translate_batch(lang, [{"term": g["term"], "q": g["q"], "a": g["a"], "example": g["example"] or ""}
-                                           for g in chunk])
-            wanted = {g["term"] for g in chunk}
-            with store.db() as conn:
-                for it in items:
-                    if it["term"] in wanted:
-                        conn.execute("INSERT INTO translations VALUES (?,?,?) ON CONFLICT(lang, term) DO UPDATE SET data=excluded.data",
-                                     (lang, it["term"], json.dumps({k: it[k] for k in ("q", "a", "example")}, ensure_ascii=False)))
-    except Exception as e:                      # try again on the next visit
+            payload = [{"term": g["term"], "q": g["q"], "a": g["a"], "example": g["example"] or ""} for g in chunk]
+            for attempt in range(3):
+                try:
+                    _store(lang, chunk, translate_batch(lang, payload))
+                    failures = 0
+                    break
+                except Exception as e:
+                    log.warning("translation to %s, batch %d, attempt %d failed: %s", lang, i // BATCH + 1, attempt + 1, e)
+            else:
+                failures += 1
+                if failures >= 3:
+                    break
+    except Exception as e:
         log.warning("translation to %s stopped: %s", lang, e)
     finally:
         with _lock:

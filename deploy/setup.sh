@@ -36,6 +36,7 @@ systemctl enable --now finsuite
 
 # Daily database backup and uptime check
 install -m 644 "$APP_DIR/deploy/finsuite.cron" /etc/cron.d/finsuite
+install -m 644 "$APP_DIR/deploy/finsuite.logrotate" /etc/logrotate.d/finsuite
 mkdir -p /var/backups/finsuite
 
 # Nginx in front of it

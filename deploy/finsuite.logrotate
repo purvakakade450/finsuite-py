@@ -1,0 +1,7 @@
+/var/log/finsuite-*.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+}

@@ -93,6 +93,12 @@ async def limits_and_caching(request, call_next):
             return JSONResponse({"detail": f"Too many requests. Please wait {retry} seconds."}, status_code=429,
                                 headers={"Retry-After": str(retry)})
     response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if request.headers.get("x-forwarded-proto") == "https" or request.url.scheme == "https":
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
     if path.startswith("/static/") and "v" in request.query_params:
         # The page stamps every file with its modified time (?v=...), so a changed file has a new URL.
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"

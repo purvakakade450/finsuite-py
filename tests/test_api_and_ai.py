@@ -173,3 +173,12 @@ def test_site_wide_daily_cap(client, ai_on, user, monkeypatch):
     assert client.post("/assistant/ai-chat", json=body, headers=user["headers"]).status_code == 200
     r = client.post("/assistant/ai-chat", json=body, headers=user["headers"])
     assert r.status_code == 429 and "limit for today" in r.json()["detail"]
+
+
+def test_security_headers(client):
+    r = client.get("/")
+    assert r.headers["x-content-type-options"] == "nosniff" and r.headers["x-frame-options"] == "SAMEORIGIN"
+    assert "strict-transport-security" not in r.headers                   # only over HTTPS
+    r = client.get("/", headers={"X-Forwarded-Proto": "https"})
+    assert r.headers["strict-transport-security"].startswith("max-age=")
+    assert "camera=()" in client.get("/api/health").headers["permissions-policy"]
