@@ -54,6 +54,7 @@ class ChatMessage(BaseModel):
 class AiChatIn(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=60)
     context: Optional[dict] = None
+    language: str = Field("en", pattern="^(en|hi|mr)$")
 
 
 # 04/05 Loans & credit risk
@@ -181,6 +182,8 @@ class IncomeTaxIn(BaseModel):
     home_loan_interest: float = 0
     hra_exemption: float = 0
     other_deductions: float = 0
+    stcg_equity: float = Field(0, ge=0, description="Short-term gains on listed shares/equity funds, Rs")
+    ltcg_equity: float = Field(0, ge=0, description="Long-term gains on listed shares/equity funds, Rs")
 
 
 # 19 Loan EMI
@@ -272,3 +275,17 @@ class ForgotIn(BaseModel):
 class ResetIn(BaseModel):
     token: str = Field(min_length=10, max_length=200)
     password: str = Field(min_length=8, max_length=200)
+
+
+class PushKeys(BaseModel):
+    p256dh: str = Field(min_length=10, max_length=300)
+    auth: str = Field(min_length=5, max_length=100)
+
+
+class PushSubIn(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=1000, pattern="^https://")
+    keys: PushKeys
+
+
+class PushUnsubIn(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=1000)

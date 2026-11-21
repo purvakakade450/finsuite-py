@@ -6,6 +6,9 @@ ALERT_INTERVAL seconds, even when nobody has FinSuite open. A fired alert is
 marked in the database (shown in the app on the next visit) and, if SMTP is
 configured, emailed to the user.
 
+Fired alerts go to every channel the user has set up: email, browser push
+and Telegram (see push.py, telegram.py).
+
 Email settings (environment variables):
     SMTP_HOST, SMTP_PORT (587), SMTP_USER, SMTP_PASSWORD, SMTP_FROM
 
@@ -21,7 +24,7 @@ import smtplib
 import threading
 from email.message import EmailMessage
 
-from . import market, store
+from . import market, push, store, telegram
 
 ALERT_INTERVAL = int(os.environ.get("ALERT_INTERVAL", 300))
 log = logging.getLogger("finsuite.alerts")
@@ -56,6 +59,30 @@ def _hit(alert: dict, price: float) -> bool:
     return price > alert["price"] if alert["type"] == "above" else price < alert["price"]
 
 
+def _texts(a: dict, price: float, currency: str | None, name: str | None) -> tuple[str, str]:
+    word = "risen above" if a["type"] == "above" else "fallen below"
+    title = f"FinSuite alert: {a['symbol']} has {word} {a['price']:,.2f}"
+    short = (f"{name or a['symbol']} ({a['symbol']}) has {word} your target of {a['price']:,.2f} {currency or ''}. "
+             f"Latest price: {price:,.2f} {currency or ''}.")
+    return title, short
+
+
+def _notify_channels(a: dict, title: str, short: str, errors: list[str]) -> None:
+    """Browser push and Telegram, in addition to email."""
+    try:
+        push.notify_user(a["user_id"], title, short)
+    except Exception as e:
+        log.warning("push for user %s failed: %s", a["user_id"], e)
+        errors.append(f"push: {e}")
+    if a.get("telegram_chat_id") and telegram.enabled():
+        try:
+            telegram.send(a["telegram_chat_id"], f"{title}\n{short}\nThe alert is now off. "
+                                                 "Re-arm it in FinSuite > Watchlist & Alerts.")
+        except Exception as e:
+            log.warning("telegram for user %s failed: %s", a["user_id"], e)
+            errors.append(f"telegram: {e}")
+
+
 def check_alerts(user_id: int | None = None) -> dict:
     """Check pending alerts (all users, or one) against live prices."""
     pending = store.pending_alerts(user_id)
@@ -73,23 +100,27 @@ def check_alerts(user_id: int | None = None) -> dict:
         if price is None or not _hit(a, price) or not store.set_triggered(a["id"], price):
             continue
         fired.append(a["id"])
+        title, short = _texts(a, price, currency, name)
         if a["email_alerts"] and email_configured():
-            word = "risen above" if a["type"] == "above" else "fallen below"
             try:
-                send_email(a["email"], f"FinSuite alert: {a['symbol']} has {word} {a['price']:,.2f}",
-                           f"Hi {a['name']},\n\n{name or a['symbol']} ({a['symbol']}) has {word} your target "
-                           f"of {a['price']:,.2f} {currency or ''}. Latest price: {price:,.2f} {currency or ''}.\n\n"
+                send_email(a["email"], title, f"Hi {a['name']},\n\n{short}\n\n"
                            "The alert is now switched off. Re-arm it in FinSuite > Watchlist & Alerts.\n\n"
                            "FinSuite (educational tool, not investment advice)")
                 store.set_emailed(a["id"])
             except Exception as e:
                 log.warning("alert email to %s failed: %s", a["email"], e)
                 errors.append(f"email: {e}")
+        _notify_channels(a, title, short, errors)
     return {"checked": len(pending), "fired": fired, "errors": errors}
 
 
 def _loop(stop: threading.Event) -> None:
     while not stop.wait(30):
+        try:
+            if telegram.enabled() and store.claim_run("telegram_poll", 25):
+                telegram.poll()
+        except Exception as e:
+            log.warning("telegram poll failed: %s", e)
         try:
             if store.claim_run("alerts_last_run", ALERT_INTERVAL - 5):
                 result = check_alerts()

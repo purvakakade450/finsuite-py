@@ -32,13 +32,13 @@ from datetime import date
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from starlette.middleware.gzip import GZipMiddleware
 
 from app import calculators as calc
 from . import schemas as s
 from . import market
-from . import ai_assistant, analysis, alerts, limits, mf, planning, store, tracker
+from . import ai_assistant, analysis, alerts, limits, mf, planning, push, store, telegram, tracker, translate
 from . import health as healthcheck
 from .glossary import GLOSSARY
 
@@ -178,7 +178,8 @@ def assistant_ai_chat(body: s.AiChatIn, request: Request, authorization: str | N
             ok, _ = store.counter_add(f"ai:{today}:all", limits.AI_DAILY_LIMIT, today)
             if not ok:
                 raise HTTPException(status_code=429, detail="The AI assistant has reached its limit for today. Please try again tomorrow.")
-    return StreamingResponse(ai_assistant.chat_stream(msgs, body.context), media_type="application/x-ndjson",
+    return StreamingResponse(ai_assistant.chat_stream(msgs, body.context, body.language),
+                             media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 # ---------------------------------------------------------------------------
@@ -247,8 +248,11 @@ def goals_emergency_fund(body: s.EmergencyFundIn):
 # 22 Knowledge center
 # ---------------------------------------------------------------------------
 @app.get("/knowledge/glossary", tags=["22 Knowledge Center"])
-def knowledge_glossary():
-    return {"glossary": GLOSSARY}
+def knowledge_glossary(lang: str = Query("en", pattern="^(en|hi|mr)$")):
+    """The glossary in English, or in Hindi / Marathi (translated once by the AI model and cached)."""
+    if lang == "en":
+        return {"glossary": GLOSSARY, "lang": "en"}
+    return translate.glossary(lang)
 
 
 # ---------------------------------------------------------------------------
@@ -547,7 +551,48 @@ def auth_logout(authorization: str | None = Header(None)):
 
 @app.get("/auth/me", tags=["25 Account"])
 def auth_me(user: dict = Depends(current_user)):
-    return {"user": user, "email_delivery": alerts.email_configured()}
+    return {"user": user, "email_delivery": alerts.email_configured(),
+            "push_available": push.available(), "telegram_available": telegram.enabled()}
+
+
+@app.get("/push/key", tags=["25 Account"])
+def push_key():
+    """Public key a browser needs to subscribe to push notifications."""
+    if not push.available():
+        return {"enabled": False}
+    return {"enabled": True, "publicKey": push.public_key()}
+
+
+@app.post("/push/subscribe", tags=["25 Account"])
+def push_subscribe(body: s.PushSubIn, user: dict = Depends(current_user)):
+    if not push.available():
+        raise HTTPException(status_code=503, detail="Push notifications are not available on this server.")
+    store.add_push_sub(user["id"], body.endpoint, body.keys.p256dh, body.keys.auth)
+    return {"ok": True}
+
+
+@app.post("/push/unsubscribe", tags=["25 Account"])
+def push_unsubscribe(body: s.PushUnsubIn, user: dict = Depends(current_user)):
+    store.remove_push_sub(body.endpoint, user["id"])
+    return {"ok": True}
+
+
+@app.post("/auth/telegram/link", tags=["25 Account"])
+def telegram_link(user: dict = Depends(current_user)):
+    """A one-time link that connects this account to a Telegram chat with the FinSuite bot."""
+    if not telegram.enabled():
+        raise HTTPException(status_code=503, detail="Telegram alerts are not set up on this server yet.")
+    limits.enforce("telegram-link", str(user["id"]), 5, 3600)
+    try:
+        return telegram.new_link_code(user["id"])
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not reach Telegram: {e}")
+
+
+@app.delete("/auth/telegram", tags=["25 Account"])
+def telegram_unlink(user: dict = Depends(current_user)):
+    store.set_telegram(user["id"], None)
+    return {"ok": True}
 
 
 @app.delete("/auth/me", tags=["25 Account"])
@@ -641,7 +686,8 @@ def api_health(deep: bool = False):
 @app.get("/api/status", tags=["Meta"])
 def api_status():
     return {"status": "ok", "docs": "/docs", "accounts_persistent": store.PERSISTENT,
-            "email_delivery": alerts.email_configured()}
+            "email_delivery": alerts.email_configured(), "push_available": push.available(),
+            "telegram_available": telegram.enabled(), "ai_assistant": ai_assistant.enabled()}
 
 
 @app.get("/about", tags=["24 About"])
@@ -683,6 +729,25 @@ def about():
 
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+
+def _build_stamp() -> int:
+    return max((int(f.stat().st_mtime) for f in FRONTEND_DIR.rglob("*") if f.is_file()), default=0)
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker():
+    """The service worker must be served from the site root so it can control every page.
+    The build stamp changes whenever any front-end file does, which makes browsers update it."""
+    text = (FRONTEND_DIR / "sw.js").read_text(encoding="utf-8").replace("__BUILD__", str(_build_stamp()))
+    return Response(text, media_type="application/javascript",
+                    headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def web_manifest():
+    return FileResponse(FRONTEND_DIR / "manifest.webmanifest", media_type="application/manifest+json",
+                        headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/", tags=["Meta"])

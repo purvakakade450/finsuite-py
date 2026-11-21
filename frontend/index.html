@@ -9,17 +9,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem("fs-theme");if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="stylesheet" href="/static/style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" defer></script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="topbar">
   <button class="top-btn nav-toggle" id="navToggle" aria-expanded="false" aria-controls="tabs"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> <span id="navCurrent">01 Finance Report</span></button>
   <div class="brand"><svg class="logo" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="3" fill="none" stroke="#D9BD7E" stroke-width="1.5"/><path d="M8 22l5-5 4 3 7-8" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 25.5h16" stroke="#D9BD7E" stroke-width="1.5"/></svg><span class="brand-name">Fin<b>Suite</b></span><span class="brand-tag">Finance workbench</span></div>
   <div class="top-actions">
+    <button class="top-btn" id="installBtn" hidden title="Install FinSuite as an app on this device">Install app</button>
     <button class="top-btn icon-btn" id="themeToggle" title="Switch dark / light mode" aria-label="Switch dark or light mode"></button>
     <button class="top-btn" id="accountBtn" onclick="openAccount()"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> <span class="lbl" id="accountLabel">Log in</span></button>
   </div>
@@ -72,7 +77,7 @@
   </div>
 </nav>
 
-<main>
+<main id="main" tabindex="-1">
 
   <!-- ============ 16 RATIO CALCULATORS ============ -->
   <section id="panel-ratios" class="panel">
@@ -134,7 +139,7 @@
       <h2>AI Finance Assistant</h2>
       <div class="ai-bar">
         <p class="muted" style="margin:0;">Ask anything about money in your own words. The assistant looks up live prices, indicators, news, mutual funds and exchange rates, runs FinSuite's tax, EMI, budget and retirement calculators, and can check your saved watchlist and portfolio.</p>
-        <div class="ai-tools"><span class="ai-mode" id="aiMode">Checking…</span><button class="btn secondary sm" onclick="newChat()">New chat</button></div>
+        <div class="ai-tools"><select id="aiLang" aria-label="Answer language" title="Language of the answers"><option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option></select><span class="ai-mode" id="aiMode">Checking…</span><button class="btn secondary sm" onclick="newChat()">New chat</button></div>
       </div>
       <div class="chat-log ai-log" id="chatLog" aria-live="polite"></div>
       <div class="chips ai-suggest" id="chatSuggest"></div>
@@ -281,7 +286,7 @@
         <div class="field"><label>Years to goal</label><input id="goalYears" type="number" value="15"></div>
       </div>
       <div class="row">
-        <div class="field"><label>Current savings (₹)</label><input id="goalCurrent" type="number" value="200000"></div>
+        <div class="field"><label>Current savings (₹)</label><input id="goalCurrent" type="number" value="200000"><button type="button" class="btn link" style="align-self:flex-start;padding-left:0;" onclick="usePortfolioFor('goalCurrent')">Use my portfolio value</button></div>
         <div class="field"><label>Expected return (%/yr)<span class="info" data-term="Expected return" tabindex="0" role="button" aria-label="Explain Expected return"></span></label><input id="goalReturn" type="number" value="12"></div>
         <div class="field"><label>Inflation (%/yr)<span class="info" data-term="Inflation" tabindex="0" role="button" aria-label="Explain Inflation"></span></label><input id="goalInflation" type="number" value="6"></div>
       </div>
@@ -314,7 +319,11 @@
     <div class="card">
       <h2>Knowledge Center</h2>
       <p class="muted">Every term used in FinSuite, explained in plain words with a simple example. No finance background needed. Tap a term to read it, or search for one.</p>
-      <div class="field" style="max-width:420px;"><input id="kcSearch" type="search" placeholder="Search a term, e.g. EMI, inflation, SIP, ROE" autocomplete="off"></div>
+      <div class="row" style="align-items:flex-end;">
+        <div class="field" style="max-width:420px;"><label for="kcSearch">Search</label><input id="kcSearch" type="search" placeholder="Search a term, e.g. EMI, inflation, SIP, ROE" autocomplete="off"></div>
+        <div class="field" style="flex:0 0 190px;"><label for="kcLang">Language</label><select id="kcLang"><option value="en">English</option><option value="hi">हिन्दी (Hindi)</option><option value="mr">मराठी (Marathi)</option></select></div>
+      </div>
+      <p class="meta" id="kcLangNote" hidden></p>
       <div id="kcList"></div>
     </div>
   </section>
@@ -467,6 +476,7 @@
         <div class="field"><label>Target price (in the stock's currency)</label><input id="alertPrice" type="number" value="2900"></div>
       </div>
       <div class="btn-row"><button class="btn" onclick="addPriceAlert()">Add alert</button>
+        <button class="btn secondary" id="pushBtn2" onclick="togglePush()" hidden>Turn on push notifications</button>
         <button class="btn secondary" id="notifyBtn" onclick="enableNotifications()"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21h4"/></svg> Enable desktop notifications</button></div>
       <div class="insight-box" id="alertMode"></div>
       <div class="table-wrap"><table id="alertTable"></table></div>
@@ -486,6 +496,9 @@
       <div class="result-box"><b>Your own inputs</b><br>All calculators and planners work only on the numbers you enter. No outside data is used.<br><span class="muted">Used in: Ratios, Finance Report, Assistant, Loans, Credit and Risk, Investment Call, Company Performance, Portfolio Dashboard, Goals, Growth and Target, Portfolio and Tax, Income Tax, Loan EMI, Budget Planner, Retirement and FIRE.</span></div>
       <div class="result-box"><b>AI model (Anthropic Claude)</b><br>Writes the AI Assistant's answers. Your question, the conversation so far and, to personalise answers, your saved watchlist and portfolio symbols are sent to the model; the numbers it quotes come from FinSuite's own calculators and the data sources above.<br><span class="muted">Used in: AI Assistant (when an API key is set on the server).</span></div>
       <div class="result-box"><b>Your account</b><br>If you create an account, your watchlist, portfolio holdings and price alerts are saved on the FinSuite server so they follow you to any device. Passwords are stored only as a salted hash.<br><span class="muted">Used in: Watchlist &amp; Alerts, Portfolio Tracker.</span></div>
+      <div class="sub" style="margin-top:18px;">Live status</div>
+      <div id="liveStatus" class="status-grid" aria-live="polite">Checking the data sources…</div>
+      <div class="btn-row"><button class="btn secondary sm" onclick="loadLiveStatus(true)">Check again</button></div>
       <div class="meta" style="margin-top:10px;">Market prices can be delayed by a few minutes. FinSuite is an educational tool and not investment advice.</div>
     </div>
   </section>
@@ -494,7 +507,7 @@
   <section id="panel-predict" class="panel">
     <div class="card">
       <h2>ML Next-Day Price Prediction</h2>
-      <p class="muted">Trains <b>Linear Regression</b> and <b>Random Forest</b> (scikit-learn) on the stock's own daily history — moving averages (7/30 day), daily return and volatility — then forecasts the next trading day's close. Models are tested on the most recent 20% of days they never saw, and compared with the naive guess "tomorrow = today"<span class="info" data-term="Naive baseline" tabindex="0" role="button" aria-label="Explain Naive baseline"></span>. Data: Yahoo Finance, no API key.</p>
+      <p class="muted">Trains four models (<b>Linear</b>, <b>Ridge</b>, <b>Random Forest</b> and <b>Gradient Boosting</b>, from scikit-learn) on the stock's own daily history: moving averages, daily and 5-day returns, volatility, RSI and trading volume. It forecasts the next trading day's close, tests every model on the most recent 20% of days it never saw, and repeats the test over five stretches of history (a <b>walk-forward test</b>). Everything is compared with the naive guess "tomorrow = today"<span class="info" data-term="Naive baseline" tabindex="0" role="button" aria-label="Explain Naive baseline"></span>. Data: Yahoo Finance, no API key.</p>
       <div class="row">
         <div class="field"><label>Company — open the list, or search any listed company</label>
           <div class="picker" id="mlPicker"><button type="button" class="picker-btn" aria-haspopup="listbox"><span class="picker-label">Reliance Industries</span><span class="picker-sym">RELIANCE.NS</span><span class="picker-caret">▾</span></button><div class="picker-panel" hidden><div class="picker-search"><span class="picker-icon"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input type="text" autocomplete="off" spellcheck="false" placeholder="Search any company, ticker or index — e.g. Samsung, Tata Steel, AAPL"></div><div class="picker-list" role="listbox"></div></div></div><input type="hidden" id="mlSymbol" value="RELIANCE.NS">
@@ -510,6 +523,7 @@
       <div class="insight-box" id="mlNews" style="display:none;"><span class="lbl">News mood vs the forecast<span class="info" data-term="News sentiment" tabindex="0" role="button" aria-label="Explain News sentiment"></span></span><span id="mlNewsText"></span></div>
       <div class="chart-box" id="mlChartBox" hidden><canvas id="mlChart"></canvas></div>
       <div class="table-wrap"><table id="mlTable"></table></div>
+      <div id="mlWalk" hidden></div>
       <div class="meta" id="mlNote" hidden style="margin-top:10px;"><span class="info" data-term="MAE, RMSE and MAPE" tabindex="0" role="button" aria-label="Explain MAE, RMSE and MAPE"></span> <b>MAE</b> – average price error · <b>RMSE</b> – like MAE but punishes big misses · <b>MAPE</b> – average error as % of price. Lower is better. Educational only — short-term prices are hard to predict and this is not investment advice.</div>
     </div>
   </section>
@@ -533,6 +547,11 @@
         <div class="field"><label>Home loan interest (max 2 L)</label><input id="itHome" type="number" value="0"></div>
         <div class="field"><label>HRA exemption</label><input id="itHra" type="number" value="0"></div>
         <div class="field"><label>Other deductions</label><input id="itOther" type="number" value="0"></div>
+      </div>
+      <div class="sub">Share-market gains this year (taxed at special rates)<span class="info" data-term="Capital gains tax" tabindex="0" role="button" aria-label="Explain Capital gains tax"></span></div>
+      <div class="row">
+        <div class="field"><label>Short-term gains, held up to 1 year (₹)</label><input id="itStcg" type="number" value="0" min="0"></div>
+        <div class="field"><label>Long-term gains, held over 1 year (₹)</label><input id="itLtcg" type="number" value="0" min="0"></div>
       </div>
       <button class="btn" onclick="calcIncomeTax()">Compare regimes</button>
       <div id="itOut"></div>
@@ -577,6 +596,12 @@
       <h2>Budget Planner (50/30/20 rule)<span class="info" data-term="50/30/20 rule" tabindex="0" role="button" aria-label="Explain 50/30/20 rule"></span></h2>
       <p class="muted">List your monthly spending and mark each item as a need, a want or a saving. Money left over counts as savings.<span class="info" data-term="Needs vs wants" tabindex="0" role="button" aria-label="Explain Needs vs wants"></span></p>
       <div class="field" style="max-width:260px;"><label>Monthly take-home income (₹)</label><input id="budIncome" type="number" value="80000"></div>
+      <details class="import-box" id="stmtBox">
+        <summary>Fill this in from a bank statement (CSV)</summary>
+        <p class="muted">Download your statement as a CSV file from net banking and choose it here. FinSuite sorts every payment into a category and works out your monthly averages. The file is read inside your browser and is <b>never uploaded</b>.</p>
+        <div class="btn-row"><input type="file" id="stmtFile" accept=".csv,text/csv,.txt" aria-label="Bank statement CSV file" onchange="importStatement(this)"><button type="button" class="btn secondary sm" onclick="downloadSampleStatement()">Download a sample CSV</button></div>
+        <div id="stmtOut" hidden></div>
+      </details>
       <div id="budItems"></div>
       <div class="btn-row">
         <button class="btn secondary" onclick="addBudgetItem()">+ Add item</button>
@@ -670,7 +695,7 @@
       </div>
       <div class="row">
         <div class="field"><label>Monthly expenses today (₹)</label><input id="fiExpenses" type="number" value="50000"></div>
-        <div class="field"><label>Savings already invested (₹)</label><input id="fiCorpus" type="number" value="500000"></div>
+        <div class="field"><label>Savings already invested (₹)</label><input id="fiCorpus" type="number" value="500000"><button type="button" class="btn link" style="align-self:flex-start;padding-left:0;" onclick="usePortfolioFor('fiCorpus')">Use my portfolio value</button></div>
         <div class="field"><label>Investing every month (₹)</label><input id="fiMonthly" type="number" value="30000"></div>
       </div>
       <div class="row">
@@ -682,6 +707,7 @@
       <button class="btn" onclick="calcFire()">Plan my retirement</button>
       <div class="result-box" id="fiError" hidden></div>
       <div class="stat-strip" id="fiStats" hidden></div>
+      <div class="progress-wrap" id="fiProgress" hidden></div>
       <div class="chart-box" id="fiChartBox" hidden><canvas id="fiChart"></canvas></div>
       <div class="insight-box" id="fiInsight" hidden><span class="lbl">Insight</span><span id="fiInsightText"></span></div>
       <div class="export-row" id="export-fire" hidden><button class="btn secondary sm" onclick="doExport('fire','pdf')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download PDF</button><button class="btn secondary sm" onclick="doExport('fire','xlsx')"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> Download Excel</button></div>
@@ -755,32 +781,92 @@
     <button class="modal-close" onclick="closeAccount()" aria-label="Close">×</button>
     <div id="accountGuest">
       <h2 id="accountTitle">Your FinSuite account</h2>
-      <p class="muted">Save your watchlist, portfolio and price alerts, and get alerts by email even when FinSuite is closed.</p>
+      <p class="muted">Save your watchlist, portfolio, chats and price alerts, and get alerts by email, Telegram or push notification even when FinSuite is closed.</p>
       <div class="result-box hold" id="accountTempNote" hidden style="font-size:12.5px;">This server is a demo host where saved accounts can be reset at any time. Your watchlist and portfolio are also kept in this browser, so you won't lose them here.</div>
-      <div class="seg"><button id="segLogin" class="on" onclick="setAuthMode('login')">Log in</button><button id="segRegister" onclick="setAuthMode('register')">Create account</button></div>
-      <form id="authForm" onsubmit="submitAuth(event)">
-        <div class="field" id="authNameField" hidden><label>Name</label><input id="authName" type="text" autocomplete="name"></div>
-        <div class="field"><label>Email</label><input id="authEmail" type="email" required autocomplete="email"></div>
-        <div class="field"><label>Password (at least 8 characters)</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password"></div>
-        <button class="btn" type="submit" id="authSubmit" style="width:100%;">Log in</button>
-        <div class="form-error" id="authError"></div>
+      <div id="authMain">
+        <div class="seg"><button id="segLogin" class="on" onclick="setAuthMode('login')">Log in</button><button id="segRegister" onclick="setAuthMode('register')">Create account</button></div>
+        <form id="authForm" onsubmit="submitAuth(event)">
+          <div class="field" id="authNameField" hidden><label for="authName">Name</label><input id="authName" type="text" autocomplete="name"></div>
+          <div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" required autocomplete="email"></div>
+          <div class="field"><label for="authPassword">Password (at least 8 characters)</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password"></div>
+          <button class="btn" type="submit" id="authSubmit" style="width:100%;">Log in</button>
+          <div class="form-error" id="authError" role="alert"></div>
+        </form>
+        <button type="button" class="btn link" id="forgotLink" style="padding-left:0;" onclick="showAuthForm('forgot')">Forgot your password?</button>
+      </div>
+      <form id="forgotForm" hidden onsubmit="submitForgot(event)">
+        <p class="muted">Enter your account's email and we will send you a link to choose a new password.</p>
+        <div class="field"><label for="forgotEmail">Email</label><input id="forgotEmail" type="email" required autocomplete="email"></div>
+        <button class="btn" type="submit" id="forgotSubmit" style="width:100%;">Send reset link</button>
+        <div class="form-error" id="forgotMsg" role="status"></div>
+        <button type="button" class="btn link" style="padding-left:0;" onclick="showAuthForm('login')">Back to log in</button>
+      </form>
+      <form id="resetForm" hidden onsubmit="submitReset(event)">
+        <p class="muted">Choose a new password for your account (at least 8 characters).</p>
+        <div class="field"><label for="resetPassword">New password</label><input id="resetPassword" type="password" required minlength="8" autocomplete="new-password"></div>
+        <button class="btn" type="submit" id="resetSubmit" style="width:100%;">Save new password</button>
+        <div class="form-error" id="resetMsg" role="alert"></div>
       </form>
     </div>
     <div id="accountUser" hidden>
       <h2>Hi, <span id="accountName"></span></h2>
-      <p class="muted" id="accountEmail"></p>
-      <label class="chip" style="margin:6px 0;"><input type="checkbox" id="accountEmailAlerts" onchange="saveEmailAlerts()"> Email me when a price alert fires</label>
+      <p class="muted" id="accountEmail" style="margin-bottom:2px;"></p>
+      <p class="meta" id="accountVerify" style="margin-top:0;"></p>
+      <div class="sub">Where should price alerts go?</div>
+      <label class="chip"><input type="checkbox" id="accountEmailAlerts" onchange="saveEmailAlerts()"> Email</label>
       <p class="meta" id="accountEmailNote"></p>
-      <div class="btn-row" style="margin:4px 0 10px;"><button class="btn secondary sm" id="testEmailBtn" onclick="sendTestEmail()">Send me a test email</button></div>
+      <div class="btn-row" style="margin:0 0 6px;"><button class="btn secondary sm" id="testEmailBtn" onclick="sendTestEmail()">Send me a test email</button></div>
       <p class="meta" id="testEmailResult"></p>
-      <p class="muted">Your watchlist, portfolio and alerts are saved to your account automatically.</p>
-      <button class="btn secondary" onclick="logout()">Log out</button>
+      <div class="channel-row" id="pushRow" hidden>
+        <div><b>Push notifications</b><div class="meta" id="pushStatus"></div></div>
+        <button class="btn secondary sm" id="pushBtn" onclick="togglePush()">Turn on</button>
+      </div>
+      <div class="channel-row" id="tgRow" hidden>
+        <div><b>Telegram</b><div class="meta" id="tgStatus"></div></div>
+        <button class="btn secondary sm" id="tgBtn" onclick="toggleTelegram()">Link Telegram</button>
+      </div>
+      <div class="insight-box" id="tgLinkBox" hidden><span class="lbl">Link Telegram</span>
+        <a id="tgLink" target="_blank" rel="noopener">Open the FinSuite bot in Telegram</a> and press <b>Start</b>. This takes up to a minute to show here, and the link works for 10 minutes. (Or send <code id="tgCode"></code> to the bot as <code>/start CODE</code>.)</div>
+      <p class="muted">Your watchlist, portfolio, chat history and alerts are saved to your account automatically.</p>
+      <div class="btn-row"><button class="btn secondary" onclick="logout()">Log out</button></div>
+      <details class="danger-zone"><summary>Delete my account</summary>
+        <p class="muted">This permanently deletes your account, saved watchlist, portfolio, chats and alerts from the server. It cannot be undone.</p>
+        <button class="btn secondary sm danger" onclick="deleteAccount()">Delete my account and all saved data</button></details>
     </div>
   </div>
 </div>
 <div class="info-pop" id="infoPop" hidden role="dialog"></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<script src="/static/app.js"></script>
+<script src="/static/js/core.js" defer></script>
+<script src="/static/js/ratios.js" defer></script>
+<script src="/static/js/report.js" defer></script>
+<script src="/static/js/assistant.js" defer></script>
+<script src="/static/js/loans-credit.js" defer></script>
+<script src="/static/js/company.js" defer></script>
+<script src="/static/js/goals.js" defer></script>
+<script src="/static/js/knowledge.js" defer></script>
+<script src="/static/js/market.js" defer></script>
+<script src="/static/js/planner-tax.js" defer></script>
+<script src="/static/js/watchlist.js" defer></script>
+<script src="/static/js/about.js" defer></script>
+<script src="/static/js/autorefresh.js" defer></script>
+<script src="/static/js/picker.js" defer></script>
+<script src="/static/js/ml.js" defer></script>
+<script src="/static/js/helpers.js" defer></script>
+<script src="/static/js/tooltips.js" defer></script>
+<script src="/static/js/downloads.js" defer></script>
+<script src="/static/js/account.js" defer></script>
+<script src="/static/js/indicators.js" defer></script>
+<script src="/static/js/ml-news.js" defer></script>
+<script src="/static/js/incometax.js" defer></script>
+<script src="/static/js/emi.js" defer></script>
+<script src="/static/js/budget.js" defer></script>
+<script src="/static/js/statement.js" defer></script>
+<script src="/static/js/funds.js" defer></script>
+<script src="/static/js/tracker.js" defer></script>
+<script src="/static/js/fire.js" defer></script>
+<script src="/static/js/fx.js" defer></script>
+<script src="/static/js/startup.js" defer></script>
 </body>
 </html>

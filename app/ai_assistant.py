@@ -44,6 +44,16 @@ How to help:
 - Market data comes from Yahoo Finance and can be delayed; news sentiment is a simple word count, and ML forecasts are rough. Say so when it matters.
 - Stay on finance, economics and using FinSuite. Politely decline unrelated tasks."""
 
+# Appended to the system prompt when the user picks Hindi or Marathi in the chat.
+LANGUAGE_NOTES = {
+    "hi": "\n- Language: reply in Hindi (Devanagari script), in simple everyday words. Keep tickers, tab names, numbers, "
+          "₹ amounts and standard abbreviations (ROE, EMI, SIP, NAV, RSI) in English letters. If the user writes in "
+          "English, still reply in Hindi.",
+    "mr": "\n- Language: reply in Marathi (Devanagari script), in simple everyday words. Keep tickers, tab names, numbers, "
+          "₹ amounts and standard abbreviations (ROE, EMI, SIP, NAV, RSI) in English letters. If the user writes in "
+          "English, still reply in Marathi.",
+}
+
 
 # ---------------------------------------------------------------------------
 # Tool inputs (validated before anything runs)
@@ -86,6 +96,8 @@ class TaxIn(BaseModel):
     home_loan_interest: float = 0
     hra_exemption: float = 0
     other_deductions: float = 0
+    stcg_equity: float = Field(0, ge=0)
+    ltcg_equity: float = Field(0, ge=0)
 
 
 class EmiIn(BaseModel):
@@ -365,7 +377,7 @@ def _context_note(context: dict | None) -> str | None:
     return " ".join(parts)
 
 
-def chat_stream(history: list[dict], context: dict | None = None) -> Iterator[str]:
+def chat_stream(history: list[dict], context: dict | None = None, language: str = "en") -> Iterator[str]:
     """Stream the assistant's reply to the last user message in `history`."""
     if not enabled():
         question = next((m["content"] for m in reversed(history) if m["role"] == "user"), "")
@@ -389,7 +401,7 @@ def chat_stream(history: list[dict], context: dict | None = None) -> Iterator[st
                 with client.beta.messages.stream(
                     model=MODEL,
                     max_tokens=MAX_OUTPUT_TOKENS,
-                    system=SYSTEM_PROMPT,
+                    system=SYSTEM_PROMPT + LANGUAGE_NOTES.get(language, ""),
                     tools=TOOL_DEFS,
                     messages=messages,
                     output_config={"effort": "medium"},

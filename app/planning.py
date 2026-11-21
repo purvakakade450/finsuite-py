@@ -80,10 +80,38 @@ def _old_rebate(taxable: float, tax: float) -> float:
     return max(tax - 12_500, 0.0) if taxable <= 5 * LAKH else tax
 
 
+LTCG_EXEMPTION = 125_000         # equity gains up to this much a year are tax free
+STCG_RATE, LTCG_RATE = 0.20, 0.125
+
+
+def _capital_gains(normal_taxable: float, basic_limit: float, stcg: float, ltcg: float) -> dict:
+    """Tax on listed-equity gains (simplified): short term 20%, long term 12.5% above the yearly
+    exemption, then 4% cess. If normal income is below the basic exemption limit, the unused part
+    of that limit is set against the gains first. Surcharge on gains is not included."""
+    shortfall = max(basic_limit - normal_taxable, 0)
+    ltcg_taxable = max(ltcg - LTCG_EXEMPTION, 0)
+    used = min(shortfall, stcg)
+    stcg_taxable, shortfall = stcg - used, shortfall - used
+    used = min(shortfall, ltcg_taxable)
+    ltcg_taxable -= used
+    tax = stcg_taxable * STCG_RATE + ltcg_taxable * LTCG_RATE
+    return {"stcg": stcg, "ltcg": ltcg, "stcg_taxable": stcg_taxable, "ltcg_taxable": ltcg_taxable,
+            "tax": tax, "cess": tax * 0.04, "total": tax * 1.04}
+
+
+def _with_gains(regime: dict, gains: dict, gross: float) -> dict:
+    regime["capital_gains"] = gains
+    regime["tax_on_income"] = regime["total_tax"]              # tax on salary / business income only
+    regime["total_tax"] += gains["total"]
+    regime["effective_rate"] = regime["total_tax"] / (gross + gains["stcg"] + gains["ltcg"]) * 100 \
+        if gross + gains["stcg"] + gains["ltcg"] else 0.0
+    return regime
+
+
 def calc_income_tax(gross_income: float, salaried: bool = True, age_group: str = "below60",
                     sec80c: float = 0, sec80d: float = 0, nps_80ccd1b: float = 0,
                     home_loan_interest: float = 0, hra_exemption: float = 0,
-                    other_deductions: float = 0) -> dict:
+                    other_deductions: float = 0, stcg_equity: float = 0, ltcg_equity: float = 0) -> dict:
     if gross_income < 0:
         raise ValueError("income must not be negative")
     if age_group not in OLD_SLABS:
@@ -92,22 +120,30 @@ def calc_income_tax(gross_income: float, salaried: bool = True, age_group: str =
                "home_loan_interest": home_loan_interest}
     if any(v < 0 for v in [*claimed.values(), hra_exemption, other_deductions]):
         raise ValueError("deductions must not be negative")
+    if stcg_equity < 0 or ltcg_equity < 0:
+        raise ValueError("capital gains must not be negative (enter losses as 0)")
     allowed = {k: min(v, CAPS[k]) for k, v in claimed.items()}
     old_deductions = sum(allowed.values()) + hra_exemption + other_deductions
+    new_limit, old_limit = NEW_SLABS[0][0], OLD_SLABS[age_group][0][0]
+    old_std = 50_000 if salaried else 0
+
+    def old_total(deductions: float) -> float:
+        r = _regime(gross_income, old_std, deductions, OLD_SLABS[age_group], _old_rebate, 37)
+        return r["total_tax"] + _capital_gains(r["taxable_income"], old_limit, stcg_equity, ltcg_equity)["total"]
 
     new = _regime(gross_income, 75_000 if salaried else 0, 0, NEW_SLABS, _new_rebate, 25)
-    old = _regime(gross_income, 50_000 if salaried else 0, old_deductions,
-                  OLD_SLABS[age_group], _old_rebate, 37)
+    old = _regime(gross_income, old_std, old_deductions, OLD_SLABS[age_group], _old_rebate, 37)
+    _with_gains(new, _capital_gains(new["taxable_income"], new_limit, stcg_equity, ltcg_equity), gross_income)
+    _with_gains(old, _capital_gains(old["taxable_income"], old_limit, stcg_equity, ltcg_equity), gross_income)
 
     # Old-regime deductions at which both regimes cost the same.
     lo, hi = 0.0, float(gross_income)
-    if _regime(gross_income, old["standard_deduction"], hi, OLD_SLABS[age_group], _old_rebate, 37)["total_tax"] > new["total_tax"]:
+    if old_total(hi) > new["total_tax"]:
         break_even = None   # even deducting everything can't beat the new regime
     else:
         for _ in range(60):
             mid = (lo + hi) / 2
-            t = _regime(gross_income, old["standard_deduction"], mid, OLD_SLABS[age_group], _old_rebate, 37)["total_tax"]
-            lo, hi = (mid, hi) if t > new["total_tax"] else (lo, mid)
+            lo, hi = (mid, hi) if old_total(mid) > new["total_tax"] else (lo, mid)
         break_even = hi
 
     diff = old["total_tax"] - new["total_tax"]
@@ -125,6 +161,11 @@ def calc_income_tax(gross_income: float, salaried: bool = True, age_group: str =
     capped = [k for k in claimed if claimed[k] > CAPS[k]]
     if capped:
         insight += " Some deductions were above their legal limit and were capped: " + ", ".join(capped) + "."
+    if stcg_equity or ltcg_equity:
+        cg = new["capital_gains"]
+        insight += (f" Share-market gains add ₹{cg['total']:,.0f} of tax in either regime "
+                    f"(short term {STCG_RATE:.0%}, long term {LTCG_RATE:.1%} above ₹{LTCG_EXEMPTION:,}, plus cess; "
+                    "surcharge on gains is not included).")
 
     return {"new": new, "old": old, "better": better, "savings": abs(diff),
             "break_even_deductions": break_even, "deductions_allowed": allowed, "insight": insight}

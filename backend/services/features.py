@@ -57,13 +57,19 @@ def engineer_features(rows: list[dict]) -> list[dict]:
     df["PriceChange"] = df["Close"] - df["PrevClose"]
     df["Volatility"] = df["DailyReturn"].rolling(window=21).std()
     df["RSI14"] = _rsi(df["Close"], window=14)
+    df["Ret5"] = df["Close"].pct_change(5)
+    if "Volume" in df:   # today's volume vs its 20-day average (1.0 when a symbol has no volume, e.g. an index)
+        avg_volume = df["Volume"].rolling(window=20).mean()
+        df["VolRatio"] = (df["Volume"] / avg_volume).replace([np.inf, -np.inf], np.nan).fillna(1.0).clip(0, 10)
+    else:
+        df["VolRatio"] = 1.0
     df = df.replace({np.nan: None})
     return df.to_dict(orient="records")
 
 
 def prepare_ml_dataset(featured_rows: list[dict]) -> dict:
     """Builds the ML-ready table: features = [Close, MA7, MA30,
-    DailyReturn, Volatility], target = NEXT day's Close. Drops rows
+    DailyReturn, Volatility, RSI14, Ret5, VolRatio], target = NEXT day's Close. Drops rows
     without a full feature history or without a next-day target, then
     does a chronological 80/20 train/test split (no shuffling — this is
     a time series, so the model must be tested on data that comes AFTER
@@ -71,14 +77,14 @@ def prepare_ml_dataset(featured_rows: list[dict]) -> dict:
     df = pd.DataFrame(featured_rows).sort_values("Date").reset_index(drop=True)
     df["TargetNextClose"] = df["Close"].shift(-1)
 
-    needed = ["MA30", "Volatility", "DailyReturn", "TargetNextClose"]
+    needed = ["MA30", "Volatility", "DailyReturn", "RSI14", "Ret5", "VolRatio", "TargetNextClose"]
     ml_df = df.dropna(subset=needed).reset_index(drop=True)
 
     split_at = round(len(ml_df) * 0.8)
     train = ml_df.iloc[:split_at]
     test = ml_df.iloc[split_at:]
 
-    cols = ["Date", "Close", "MA7", "MA30", "DailyReturn", "Volatility", "TargetNextClose"]
+    cols = ["Date", "Close", "MA7", "MA30", "DailyReturn", "Volatility", "RSI14", "Ret5", "VolRatio", "TargetNextClose"]
     return {
         "rows": ml_df[cols].to_dict(orient="records"),
         "train_count": len(train),

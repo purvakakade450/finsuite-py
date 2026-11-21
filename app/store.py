@@ -371,3 +371,8 @@ def start_session(user_id: int) -> dict:
     with db() as conn:
         user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
         return {"token": _new_session(conn, user["id"]), "user": _public(user)}
+
+
+def clear_telegram_chat(chat_id: str) -> None:
+    with db() as conn:
+        conn.execute("UPDATE users SET telegram_chat_id=NULL WHERE telegram_chat_id=?", (chat_id,))

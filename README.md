@@ -115,7 +115,7 @@ backend/services/
   ml_models.py     Linear Regression and Random Forest (scikit-learn)
   simulate.py      Synthetic OHLCV generator for practice
 frontend/
-  index.html, app.js, style.css
+  index.html, style.css, js/ (one script per tool), sw.js, manifest.webmanifest, icons/
 docs/
   FinSuite_Project_Report.docx / .pdf
 ```

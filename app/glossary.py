@@ -438,3 +438,27 @@ _add(G, "Maximum drawdown",
      "The biggest fall from a peak to a later low during the period, in percent. It shows the worst loss someone who bought at the top would have sat through.",
      "A stock that went from ₹200 down to ₹150 before recovering had a maximum drawdown of 25%.",
      "Currency and Compare.", also=("drawdown",))
+
+# ---------------------------------------------------------------------------
+G = "6. Machine learning prediction"
+# ---------------------------------------------------------------------------
+_add(G, "Walk-forward test",
+     "A fairer way to test a prediction model on prices. Instead of one test at the end, the history is cut into several stretches. For each stretch the model is trained only on the days before it and tested on that stretch, then the cut moves forward. If a model beats the naive guess in most stretches, the result is more believable than a single lucky run.",
+     "With 5 stretches of 18 days each, a model that beats 'tomorrow = today' in 4 of 5 stretches looks consistent, while one that wins only 1 of 5 may just have been lucky.",
+     "ML Prediction.", also=("walk forward", "walk-forward"))
+_add(G, "Direction accuracy",
+     "How often a model gets the direction right, meaning whether the next close ends above or below today's close. A coin toss gets about 50%. Getting the direction right matters more to many investors than the exact price.",
+     "A direction accuracy of 54% means that on 54 of every 100 test days the model correctly said up or down.",
+     "ML Prediction.", also=("directional accuracy", "direction right"))
+_add(G, "Ridge Regression",
+     "A version of Linear Regression that keeps the model's numbers small, so it does not over-react to noisy inputs. It is often steadier than plain Linear Regression when several inputs move together, such as the 7 day and 30 day averages.",
+     "If two inputs say almost the same thing, Ridge shares the weight between them instead of giving one a huge value.",
+     "ML Prediction.", also=("ridge",))
+_add(G, "Gradient Boosting",
+     "A model that builds many small decision trees one after another, where each new tree tries to fix the mistakes of the ones before it. It can capture patterns that a straight line or a single forest misses, but it can also over-fit noisy price data.",
+     "Tree 1 guesses roughly, tree 2 corrects tree 1's biggest misses, tree 3 corrects what is left, and so on for about 150 trees.",
+     "ML Prediction.", also=("boosting",))
+_add(G, "Over-fitting",
+     "When a model learns the past so closely, including its random noise, that it does badly on new days. A model can look excellent on the days it trained on and still fail on tomorrow. This is why FinSuite tests only on days the model has not seen.",
+     "Memorising last year's exam answers gets a perfect score on last year's paper but not on this year's.",
+     "ML Prediction.", also=("overfitting", "over fitting"))
